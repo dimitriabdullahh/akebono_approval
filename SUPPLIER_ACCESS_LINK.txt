@@ -1,0 +1,114 @@
+================================================================================
+                    SUPPLIER PORTAL ACCESS LINK
+                 PT Precision Automotive Indonesia
+================================================================================
+
+AKSES PORTAL SUPPLIER - PT PRECISION AUTOMOTIVE INDONESIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🌐 LINK PORTAL:
+   http://localhost:8000/supplier/lH7Qy9ryhcqasnj2Fn9mHUUYhlGhcVUt
+
+🔑 TOKEN AKSES:
+   lH7Qy9ryhcqasnj2Fn9mHUUYhlGhcVUt
+
+INFORMASI SUPPLIER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PT Name              : PT Precision Automotive Indonesia
+Vendor Code          : SUPP-HXGL2EXE
+PIC Name             : Bambang Wijaya
+PIC Email            : bambang@precision-auto.id
+PIC Phone            : 081234567890
+Address              : Jl. Merdeka No. 123, Karawang, Jawa Barat
+
+INFORMASI REQUEST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Model                : Transmission Assembly
+Part Name            : Komponen Transmisi Otomatis
+Part Number          : AT-2024-001
+Due Date             : 04 September 2026
+Status               : Active
+
+DOKUMEN YANG DIMINTA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Process Flow Diagram (PFD)
+2. FMEA Analysis
+3. Initial Sample Inspection Report (ISIR)
+4. Drawing Product
+
+CARA AKSES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Buka browser (Chrome, Firefox, Edge, dll)
+2. Copy link portal di atas ke URL bar
+3. Tekan Enter
+4. Anda akan langsung masuk ke dashboard supplier
+   (Tidak perlu login dengan username/password)
+
+FITUR YANG TERSEDIA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Dashboard - Lihat overview status dokumen
+✓ Tracking - Track status dokumen secara real-time
+✓ Upload - Upload dokumen dengan drag-and-drop
+✓ Document Detail - Lihat detail setiap dokumen
+✓ Notifications - Terima notifikasi penting
+✓ Download - Download dokumen yang sudah disetujui
+
+REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Format File         : PDF, JPG, PNG
+Max Size            : 10 MB per file
+Internet Connection : Required
+Browser             : Chrome, Firefox, Edge (updated)
+
+EMAIL NOTIFIKASI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Supplier akan menerima notifikasi ke: bambang@precision-auto.id
+
+Jenis notifikasi:
+1. Surat Request (berisi link portal)
+2. Notifikasi dokumen terkirim
+3. Pengingat revisi (jika ada)
+4. Notifikasi approval selesai
+
+SUPPORT & BANTUAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Email   : qa@akebono.local
+Phone   : +62 XXX XXXX XXXX
+Hours   : Senin-Jumat, 08:00-17:00 WIB
+
+TIPS PENTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Jangan bagikan link ke orang lain
+✓ Link tidak perlu login, hanya butuh akses via URL
+✓ Upload dokumen sebelum deadline
+✓ Respond revisi dengan cepat jika ada
+✓ Monitor notification untuk update terbaru
+✓ Contact support jika ada pertanyaan
+
+DOKUMENTASI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Lihat dokumentasi lengkap:
+- SUPPLIER_TEST_ACCESS.md - Full documentation
+- QUICK_START_SUPPLIER_PORTAL.md - Quick reference
+- SUPPLIER_PORTAL_GUIDE.md - Complete guide
+- DOCUMENTATION_INDEX.md - All documentation
+
+================================================================================
+
+Dibuat         : 21 Agustus 2026
+Status         : ✅ AKTIF
+Versi          : 1.0
+
+================================================================================
+                    SIAP UNTUK DIGUNAKAN SUPPLIER
+================================================================================

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Upload Drawing</title>
+</head>
+<body>
+    <h1>Test Upload Drawing to Inspection Standard</h1>
+    
+    <form id="uploadForm">
+        <label for="inspectionStandardId">Inspection Standard ID:</label>
+        <input type="text" id="inspectionStandardId" value="1" required><br><br>
+        
+        <label for="fileInput">Select Drawing File:</label>
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" required><br><br>
+        
+        <button type="submit">Upload</button>
+    </form>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+    
+    <script>
+        const form = document.getElementById('uploadForm');
+        const resultDiv = document.getElementById('result');
+        
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const inspectionStandardId = document.getElementById('inspectionStandardId').value;
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                resultDiv.innerHTML = '<p style="color: red;">Please select a file</p>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<p>Uploading...</p>';
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('drawing_name', file.name.split('.')[0]);
+            formData.append('drawing_no', 'TEST-001');
+            formData.append('revision', 'A');
+            formData.append('description', 'Test upload');
+            
+            try {
+                // Get CSRF token first
+                const tokenResponse = await fetch('/sanctum/csrf-cookie', {
+                    credentials: 'include'
+                });
+                
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                
+                const response = await fetch(`/api/inspection-standards/${inspectionStandardId}/upload-drawing`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken || '',
+                        'Accept': 'application/json',
+                    },
+                    body: formData,
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    resultDiv.innerHTML = `
+                        <p style="color: green;">Upload successful!</p>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p style="color: red;">Upload failed!</p>
+                        <p>Status: ${response.status}</p>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <p style="color: red;">Error: ${error.message}</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

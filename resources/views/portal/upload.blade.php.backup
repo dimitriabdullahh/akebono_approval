@@ -1,0 +1,1150 @@
+@extends('layouts.supplier')
+
+@section('title', 'Portal Upload Dokumen Supplier')
+
+@section('content')
+<div class="container py-4 animate-on-scroll">
+    <!-- Enhanced Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient-primary text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h2 class="mb-3">
+                                <i class="ti ti-building me-2"></i>Portal Upload Dokumen Supplier
+                            </h2>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="ti ti-building-store me-2"></i>
+                                        <div>
+                                            <strong>Supplier:</strong> {{ $request->supplier->name }}
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="ti ti-user me-2"></i>
+                                        <div>
+                                            <strong>PIC:</strong> {{ $request->supplier->pic_name ?? 'Tidak Diketahui' }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="ti ti-tag me-2"></i>
+                                        <div>
+                                            <strong>Model:</strong> {{ $request->model }}
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <i class="ti ti-hash me-2"></i>
+                                        <div>
+                                            <strong>Part Number:</strong> {{ $request->part_number }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info mb-0 bg-white bg-opacity-20 border-0">
+                                <i class="ti ti-info-circle me-2"></i>
+                                <strong>Informasi:</strong> Silakan unggah seluruh dokumen yang diminta di bawah. Dokumen yang ditandai dengan <span class="badge bg-danger ms-1">WAJIB</span> harus diunggah sebelum submit.
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                                <div class="mb-2">
+                                    <span class="display-6 font-bold">{{ $progress }}%</span>
+                                </div>
+                                <div class="progress mb-2" style="height: 12px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ $progress }}%" aria-valuenow="{{ $progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <small>Progress Kelengkapan Dokumen</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Box untuk Multiple Parts -->
+    @if($request->hasMultipleParts())
+    <div class="alert alert-info border-start border-4 border-info mb-4" style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);">
+        <div class="d-flex align-items-start">
+            <div class="me-3">
+                <i class="ti ti-info-circle" style="font-size: 2rem; color: #0284c7;"></i>
+            </div>
+            <div class="flex-grow-1">
+                <h5 class="mb-2" style="color: #0c4a6e;">
+                    <strong>Request Multi-Part Terdeteksi</strong>
+                </h5>
+                <p class="mb-2" style="color: #075985;">
+                    Request ini mencakup <strong>{{ $request->requestParts()->count() }} part</strong>. 
+                    Silakan upload dokumen untuk setiap part di bawah ini.
+                </p>
+                <ul class="mb-0" style="color: #075985;">
+                    @foreach($request->requestParts as $part)
+                        <li><strong>{{ $part->part_name }}</strong> ({{ $part->part_number }})</li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Enhanced Documents Upload Form -->
+    <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        @csrf
+        
+        @if($request->hasMultipleParts())
+            <!-- Display documents grouped by parts -->
+            @foreach($request->requestParts as $partIndex => $part)
+            <div class="card mb-4 part-section" style="border-left: 4px solid #3b82f6;">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="ti ti-components me-2"></i>
+                        Part {{ $partIndex + 1 }}: {{ $part->part_name }}
+                        <span class="badge bg-white text-primary ms-2">{{ $part->part_number }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @php
+                        $partDocuments = $part->requestDocuments()->with(['documentType', 'histories'])->get();
+                        $partDocsByStatus = $partDocuments->groupBy(function ($doc) {
+                            return $doc->status === 'REVISE' ? 'REVISE' : ($doc->status === 'PENDING' ? 'PENDING' : 'SUBMITTED');
+                        });
+                    @endphp
+                    
+                    @foreach($partDocsByStatus as $status => $documents)
+                        @if(count($documents) > 0)
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6 class="mb-3">
+                                    @if($status === 'PENDING')
+                                        <i class="ti ti-clock text-warning me-2"></i>Dokumen Menunggu Upload
+                                    @elseif($status === 'REVISE') 
+                                        <i class="ti ti-alert-circle text-danger me-2"></i>Dokumen Perlu Revisi
+                                    @else
+                                        <i class="ti ti-check-circle text-success me-2"></i>Dokumen Telah Disubmit
+                                    @endif
+                                </h6>
+                            </div>
+                        </div>
+                        @endif
+                        
+                        @foreach($documents as $doc)
+            <div class="card mb-3 document-card" data-status="{{ $doc->status }}">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-start">
+                                <div class="me-3">
+                                    @if($doc->documentType->is_mandatory)
+                                        <div class="bg-danger bg-opacity-10 rounded-circle p-2">
+                                            <i class="ti ti-star text-danger"></i>
+                                        </div>
+                                    @else
+                                        <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
+                                            <i class="ti ti-file text-secondary"></i>
+                                        </div>
+                                    @endif
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-2 d-flex align-items-center gap-2">
+                                        {{ $doc->documentType->name }}
+                                        @if($doc->documentType->is_mandatory)
+                                            <span style="color: #DC2626; font-size: 1.2em; font-weight: bold;">*</span>
+                                        @endif
+                                    </h6>
+
+                                    @if($doc->documentType->scope)
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                                <i class="ti ti-tag me-1"></i>Scope: {{ implode(', ', $doc->documentType->scope) }}
+                                            </small>
+                                        </div>
+                                    @endif
+
+                                    @if($doc->status === 'REVISE')
+                                    <div class="revision-alert-card mb-2">
+                                        <div class="revision-header">
+                                            <div class="revision-icon">
+                                                <i class="ti ti-alert-triangle"></i>
+                                            </div>
+                                            <div class="revision-title">
+                                                <strong>Revisi Diminta</strong>
+                                                @if($doc->revision_deadline_at)
+                                                    <span class="revision-deadline">
+                                                        <i class="ti ti-clock"></i>
+                                                        {{ $doc->revision_deadline_at->format('d M Y H:i') }}
+                                                        <span class="deadline-status">
+                                                            ({{ $doc->revision_deadline_at->diffForHumans() }})
+                                                            @if($doc->is_deadline_passed)
+                                                                <span class="badge bg-danger ms-1">TERLAMPAUI</span>
+                                                            @endif
+                                                        </span>
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="revision-content">
+                                            <div class="revision-note-wrapper">
+                                                <div class="revision-note-display">
+                                                    <p class="revision-note-preview mb-0">
+                                                        {{ Str::limit($doc->revision_note, 150) }}
+                                                    </p>
+                                                    <div class="revision-note-full" data-full-text="{{ $doc->revision_note }}" style="display: none;">
+                                                        <p class="mb-0">{{ $doc->revision_note }}</p>
+                                                    </div>
+                                                </div>
+                                                @if(strlen($doc->revision_note) > 150)
+                                                    <button type="button" class="show-more-toggle mt-3" onclick="toggleRevisionNote(this)" data-expanded="false">
+                                                        <span class="toggle-text">Lihat Selengkapnya</span>
+                                                        <i class="ti ti-chevron-down toggle-icon"></i>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endif
+
+                                    @if(in_array($doc->status, ['SUBMITTED', 'APPROVED']))
+                                    <div class="alert alert-success mb-2 py-2" style="border-left: 4px solid #10B981;">
+                                        <div class="d-flex align-items-start">
+                                            <i class="ti ti-check-circle me-2 mt-1 text-success"></i>
+                                            <div>
+                                                <strong>Status: {{ $doc->status === 'APPROVED' ? 'DISETUJUI' : 'DISUBMIT' }}</strong>
+                                                <p class="mb-0 small">
+                                                    File: <code>{{ $doc->original_filename }}</code><br>
+                                                    Diunggah: {{ $doc->uploaded_at?->format('d M Y H:i') }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            @if($doc->status !== 'APPROVED')
+                            <div class="upload-container">
+                                <div class="upload-area border border-2 rounded-3 text-center position-relative" 
+                                     style="border-style: dashed !important; 
+                                            border-color: #3b82f6 !important; 
+                                            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); 
+                                            min-height: 160px; 
+                                            padding: 1.5rem;
+                                            cursor: pointer;
+                                            transition: all 0.3s ease;">
+                                    
+                                    <input type="file" 
+                                           name="documents[{{ $doc->id }}]" 
+                                           class="d-none file-input" 
+                                           id="file_{{ $doc->id }}" 
+                                           accept=".pdf,.jpg,.jpeg,.png"
+                                           data-doc-id="{{ $doc->id }}">
+                                    
+                                    <label for="file_{{ $doc->id }}" 
+                                           class="upload-label w-100 h-100 d-flex flex-column align-items-center justify-content-center position-absolute top-0 start-0"
+                                           style="cursor: pointer; margin: 0; padding: 1.5rem;">
+                                        <div class="upload-icon-wrapper">
+                                            <i class="ti ti-cloud-upload d-block mb-3" 
+                                               style="font-size: 3rem; 
+                                                      color: #1e40af; 
+                                                      line-height: 1;"></i>
+                                        </div>
+                                        <div class="upload-text-wrapper">
+                                            <p class="mb-2 fw-bold text-dark" 
+                                               style="font-size: 1rem; 
+                                                      color: #1f2937 !important;
+                                                      line-height: 1.4;">
+                                                Klik atau Drop File Di Sini
+                                            </p>
+                                            <small class="d-block text-secondary" 
+                                                   style="color: #6b7280 !important; 
+                                                          font-size: 0.85rem;">
+                                                PDF, JPG, atau PNG (Max 10MB)
+                                            </small>
+                                        </div>
+                                    </label>
+                                    
+                                    <div class="file-info-display position-absolute top-0 start-0 w-100 h-100 d-none flex-column align-items-center justify-content-center"
+                                         style="background-color: #d1fae5; padding: 1.5rem;">
+                                        <i class="ti ti-check-circle text-success mb-2" style="font-size: 2.5rem;"></i>
+                                        <div class="file-name text-success fw-semibold mb-1" style="font-size: 0.9rem;"></div>
+                                        <div class="file-size text-muted mb-2" style="font-size: 0.8rem;"></div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-file-btn mt-2">
+                                            <i class="ti ti-x me-1"></i>Hapus File
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            @else
+                            <div class="d-flex gap-2">
+                                <a href="{{ route('portal.download', [$token, $doc->id]) }}" class="btn btn-success flex-grow-1">
+                                    <i class="ti ti-download me-1"></i> Download
+                                </a>
+                                <a href="{{ route('portal.preview', [$token, $doc->id]) }}" class="btn btn-outline-primary" title="Preview" target="_blank">
+                                    <i class="ti ti-eye"></i>
+                                </a>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+                        <div class="card mb-3 document-card" data-status="{{ $doc->status }}">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-start">
+                                            <div class="me-3">
+                                                @if($doc->documentType->is_mandatory)
+                                                    <div class="bg-danger bg-opacity-10 rounded-circle p-2">
+                                                        <i class="ti ti-star text-danger"></i>
+                                                    </div>
+                                                @else
+                                                    <div class="bg-secondary bg-opacity-10 rounded-circle p-2">
+                                                        <i class="ti ti-file text-secondary"></i>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-2 d-flex align-items-center gap-2">
+                                                    {{ $doc->documentType->name }}
+                                                    @if($doc->documentType->is_mandatory)
+                                                        <span style="color: #DC2626; font-size: 1.2em; font-weight: bold;">*</span>
+                                                    @endif
+                                                </h6>
+
+                                                @if($doc->documentType->scope)
+                                                    <div class="mb-2">
+                                                        <small class="text-muted">
+                                                            <i class="ti ti-tag me-1"></i>Scope: {{ implode(', ', $doc->documentType->scope) }}
+                                                        </small>
+                                                    </div>
+                                                @endif
+
+                                                @if($doc->status === 'REVISE')
+                                                <div class="revision-alert-card mb-2">
+                                                    <div class="revision-header">
+                                                        <div class="revision-icon">
+                                                            <i class="ti ti-alert-triangle"></i>
+                                                        </div>
+                                                        <div class="revision-title">
+                                                            <strong>Revisi Diminta</strong>
+                                                            @if($doc->revision_deadline_at)
+                                                                <span class="revision-deadline">
+                                                                    <i class="ti ti-clock"></i>
+                                                                    {{ $doc->revision_deadline_at->format('d M Y H:i') }}
+                                                                    <span class="deadline-status">
+                                                                        ({{ $doc->revision_deadline_at->diffForHumans() }})
+                                                                        @if($doc->is_deadline_passed)
+                                                                            <span class="badge bg-danger ms-1">TERLAMPAUI</span>
+                                                                        @endif
+                                                                    </span>
+                                                                </span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    <div class="revision-content">
+                                                        <div class="revision-note-wrapper">
+                                                            <div class="revision-note-display">
+                                                                <p class="revision-note-preview mb-0">
+                                                                    {{ Str::limit($doc->revision_note, 150) }}
+                                                                </p>
+                                                                <div class="revision-note-full" data-full-text="{{ $doc->revision_note }}" style="display: none;">
+                                                                    <p class="mb-0">{{ $doc->revision_note }}</p>
+                                                                </div>
+                                                            </div>
+                                                            @if(strlen($doc->revision_note) > 150)
+                                                                <button type="button" class="show-more-toggle mt-3" onclick="toggleRevisionNote(this)" data-expanded="false">
+                                                                    <span class="toggle-text">Lihat Selengkapnya</span>
+                                                                    <i class="ti ti-chevron-down toggle-icon"></i>
+                                                                </button>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                @endif
+
+                                                @if(in_array($doc->status, ['SUBMITTED', 'APPROVED']))
+                                                <div class="alert alert-success mb-2 py-2" style="border-left: 4px solid #10B981;">
+                                                    <div class="d-flex align-items-start">
+                                                        <i class="ti ti-check-circle me-2 mt-1 text-success"></i>
+                                                        <div>
+                                                            <strong>Status: {{ $doc->status === 'APPROVED' ? 'DISETUJUI' : 'DISUBMIT' }}</strong>
+                                                            <p class="mb-0 small">
+                                                                File: <code>{{ $doc->original_filename }}</code><br>
+                                                                Diunggah: {{ $doc->uploaded_at?->format('d M Y H:i') }}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        @if($doc->status !== 'APPROVED')
+                                        <div class="upload-container">
+                                            <div class="upload-area border border-2 rounded-3 text-center position-relative" 
+                                                 style="border-style: dashed !important; 
+                                                        border-color: #3b82f6 !important; 
+                                                        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); 
+                                                        min-height: 160px; 
+                                                        padding: 1.5rem;
+                                                        cursor: pointer;
+                                                        transition: all 0.3s ease;">
+                                                
+                                                <input type="file" 
+                                                       name="documents[{{ $doc->id }}]" 
+                                                       class="d-none file-input" 
+                                                       id="file_{{ $doc->id }}" 
+                                                       accept=".pdf,.jpg,.jpeg,.png"
+                                                       data-doc-id="{{ $doc->id }}">
+                                                
+                                                <label for="file_{{ $doc->id }}" 
+                                                       class="upload-label w-100 h-100 d-flex flex-column align-items-center justify-content-center position-absolute top-0 start-0"
+                                                       style="cursor: pointer; margin: 0; padding: 1.5rem;">
+                                                    <div class="upload-icon-wrapper">
+                                                        <i class="ti ti-cloud-upload d-block mb-3" 
+                                                           style="font-size: 3rem; 
+                                                                  color: #1e40af; 
+                                                                  line-height: 1;"></i>
+                                                    </div>
+                                                    <div class="upload-text-wrapper">
+                                                        <p class="mb-2 fw-bold text-dark" 
+                                                           style="font-size: 1rem; 
+                                                                  color: #1f2937 !important;
+                                                                  line-height: 1.4;">
+                                                            Klik atau Drop File Di Sini
+                                                        </p>
+                                                        <small class="d-block text-secondary" 
+                                                               style="color: #6b7280 !important; 
+                                                                      font-size: 0.85rem;">
+                                                            PDF, JPG, atau PNG (Max 10MB)
+                                                        </small>
+                                                    </div>
+                                                </label>
+                                                
+                                                <div class="file-info-display position-absolute top-0 start-0 w-100 h-100 d-none flex-column align-items-center justify-content-center"
+                                                     style="background-color: #d1fae5; padding: 1.5rem;">
+                                                    <i class="ti ti-check-circle text-success mb-2" style="font-size: 2.5rem;"></i>
+                                                    <div class="file-name text-success fw-semibold mb-1" style="font-size: 0.9rem;"></div>
+                                                    <div class="file-size text-muted mb-2" style="font-size: 0.8rem;"></div>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-file-btn mt-2">
+                                                        <i class="ti ti-x me-1"></i>Hapus File
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @else
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ route('portal.download', [$token, $doc->id]) }}" class="btn btn-success flex-grow-1">
+                                                <i class="ti ti-download me-1"></i> Download
+                                            </a>
+                                            <a href="{{ route('portal.preview', [$token, $doc->id]) }}" class="btn btn-outline-primary" title="Preview" target="_blank">
+                                                <i class="ti ti-eye"></i>
+                                            </a>
+                                        </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    @endforeach
+                </div>
+            </div>
+            @endforeach
+        @else
+            <!-- Display documents without parts (original flow) -->
+            @foreach($documentRequests as $status => $documents)
+                @if(count($documents) > 0)
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="mb-3">
+                            @if($status === 'PENDING')
+                                <i class="ti ti-clock text-warning me-2"></i>Dokumen Menunggu Upload
+                            @elseif($status === 'REVISE') 
+                                <i class="ti ti-alert-circle text-danger me-2"></i>Dokumen Perlu Revisi
+                            @else
+                                <i class="ti ti-check-circle text-success me-2"></i>Dokumen Telah Disubmit
+                            @endif
+                        </h5>
+                    </div>
+                </div>
+                @endif
+                
+                @foreach($documents as $doc)
+
+<script>
+<script>
+// Function to toggle revision note text with slide down animation
+function toggleRevisionNote(button) {
+    const wrapper = button.closest('.revision-note-wrapper');
+    const previewElement = wrapper.querySelector('.revision-note-preview');
+    const fullElement = wrapper.querySelector('.revision-note-full');
+    const isExpanded = button.dataset.expanded === 'true';
+    const toggleText = button.querySelector('.toggle-text');
+    
+    if (isExpanded) {
+        // Collapse - hide full text with slide up animation
+        fullElement.classList.remove('expanded');
+        previewElement.classList.remove('collapsed-hide');
+        
+        button.dataset.expanded = 'false';
+        toggleText.textContent = 'Lihat Selengkapnya';
+    } else {
+        // Expand - show full text with slide down animation
+        previewElement.classList.add('collapsed-hide');
+        
+        // Small delay to ensure preview is hidden first
+        setTimeout(() => {
+            fullElement.style.display = 'block';
+            // Trigger reflow
+            fullElement.offsetHeight;
+            fullElement.classList.add('expanded');
+        }, 50);
+        
+        button.dataset.expanded = 'true';
+        toggleText.textContent = 'Lihat Lebih Sedikit';
+    }
+}
+
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch('{{ route("portal.upload", $token) }}', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        } catch (error) {
+            alert('Terjadi kesalahan: ' + error.message);
+        }
+    });
+
+    // Drag and drop
+    document.querySelectorAll('.upload-area').forEach(area => {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            area.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            area.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            area.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            area.style.backgroundColor = '#dbeafe';
+            area.style.borderColor = '#2563EB';
+        }
+
+        function unhighlight(e) {
+            area.style.backgroundColor = '#f8fafc';
+            area.style.borderColor = '#cbd5e1';
+        }
+
+        area.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            const input = area.querySelector('input[type="file"]');
+            input.files = files;
+        }
+    });
+</script>
+@endsection
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.document-card {
+    transition: all 0.3s ease;
+}
+
+.document-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.upload-area {
+    transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+    border-color: #2563eb !important;
+    background-color: #dbeafe !important;
+    transform: scale(1.02);
+}
+
+.upload-area.dragover {
+    border-color: #1d4ed8 !important;
+    background-color: #bfdbfe !important;
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.upload-area.file-selected {
+    border-color: #10b981 !important;
+    background-color: #d1fae5 !important;
+}
+
+.upload-area label {
+    transition: all 0.2s ease;
+}
+
+.upload-area:hover label {
+    transform: translateY(-2px);
+}
+
+.remove-file {
+    text-decoration: none !important;
+}
+
+.remove-file:hover {
+    text-decoration: underline !important;
+}
+
+.remove-file:hover {
+    text-decoration: underline !important;
+}
+
+/* Revision Alert Card - Professional Design */
+.revision-alert-card {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
+    transition: all 0.3s ease;
+}
+
+.revision-alert-card:hover {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+}
+
+.revision-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.revision-icon {
+    width: 36px;
+    height: 36px;
+    background: rgba(245, 158, 11, 0.15);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #d97706;
+    flex-shrink: 0;
+}
+
+.revision-title {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.revision-title strong {
+    color: #92400e;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.revision-deadline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #78350f;
+    font-weight: 500;
+}
+
+.revision-deadline i {
+    font-size: 14px;
+}
+
+.deadline-status {
+    margin-left: 4px;
+    font-size: 12px;
+    color: #78350f;
+}
+
+.revision-content {
+    position: relative;
+}
+
+.revision-note-wrapper {
+    position: relative;
+}
+
+.revision-note-display {
+    position: relative;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.revision-note-preview {
+    color: #451a03;
+    font-size: 14px;
+    line-height: 1.6;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    margin-bottom: 0;
+}
+
+.revision-note-full {
+    color: #451a03;
+    font-size: 14px;
+    line-height: 1.6;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.4s ease-out, opacity 0.3s ease-out, margin-top 0.3s ease-out;
+    margin-top: 0;
+}
+
+.revision-note-full.expanded {
+    max-height: 1000px;
+    opacity: 1;
+    margin-top: 12px;
+}
+
+.revision-note-preview.collapsed-hide {
+    display: none;
+}
+
+.revision-note-text {
+    color: #451a03;
+    font-size: 14px;
+    line-height: 1.6;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    transition: all 0.3s ease;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 6px;
+    margin-bottom: 0;
+}
+
+.revision-note-text.expanded {
+    max-height: none;
+}
+
+.show-more-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+    letter-spacing: 0.01em;
+}
+
+.show-more-toggle:hover {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+    transform: translateY(-1px);
+}
+
+.show-more-toggle:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(245, 158, 11, 0.2);
+}
+
+.show-more-toggle .toggle-icon {
+    font-size: 16px;
+    transition: transform 0.3s ease;
+}
+
+.show-more-toggle[data-expanded="true"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.show-more-toggle .toggle-text {
+    font-size: 13px;
+}
+
+/* Animation for text expand/collapse */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 500px;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 1;
+        max-height: 500px;
+    }
+    to {
+        opacity: 0;
+        max-height: 0;
+    }
+}
+
+.revision-note-text.expanding {
+    animation: slideDown 0.3s ease-out;
+}
+
+.revision-note-text.collapsing {
+    animation: slideUp 0.3s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .revision-alert-card {
+        padding: 14px 16px;
+    }
+    
+    .revision-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+    }
+    
+    .revision-title strong {
+        font-size: 14px;
+    }
+    
+    .revision-deadline {
+        font-size: 12px;
+    }
+    
+    .revision-note-text {
+        font-size: 13px;
+        padding: 10px;
+    }
+    
+    .show-more-toggle {
+        padding: 7px 14px;
+        font-size: 12px;
+    }
+}
+
+.upload-label {
+    z-index: 1;
+}
+
+.file-info-display {
+    z-index: 2;
+    background-color: #d1fae5 !important;
+    border-radius: 0.75rem;
+}
+
+.file-info-display.d-flex {
+    display: flex !important;
+}
+
+.remove-file-btn {
+    z-index: 3;
+}
+
+.file-info {
+    padding: 0.5rem;
+    background-color: rgba(34, 197, 94, 0.1);
+    border-radius: 0.5rem;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+@media (max-width: 768px) {
+    .document-card .row {
+        flex-direction: column;
+    }
+    
+    .document-card .col-md-4 {
+        margin-top: 1rem;
+    }
+    
+    .upload-area {
+        padding: 2rem 1rem;
+    }
+}
+
+/* Loading animation */
+.upload-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.upload-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: inherit;
+    z-index: 10;
+}
+
+.upload-loading::before {
+    content: 'Uploading...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 11;
+    font-weight: 600;
+    color: var(--accent-color);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadForm = document.getElementById('uploadForm');
+    
+    // Enhanced file upload handling
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('file-input')) {
+            handleFileSelect(e.target);
+        }
+    });
+
+    function handleFileSelect(input) {
+        const file = input.files[0];
+        const uploadArea = input.closest('.upload-area');
+        const fileInfoDisplay = uploadArea.querySelector('.file-info-display');
+        const uploadLabel = uploadArea.querySelector('.upload-label');
+        
+        if (!file) {
+            // Reset to upload state
+            uploadArea.classList.remove('file-selected');
+            if (fileInfoDisplay) {
+                fileInfoDisplay.classList.remove('d-flex');
+                fileInfoDisplay.classList.add('d-none');
+            }
+            if (uploadLabel) {
+                uploadLabel.classList.remove('d-none');
+            }
+            return;
+        }
+
+        // Validate file size (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File terlalu besar. Maksimal 10MB.');
+            input.value = '';
+            return;
+        }
+
+        // Validate file type
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('Format file tidak didukung. Gunakan PDF, JPG, atau PNG.');
+            input.value = '';
+            return;
+        }
+
+        // Update UI - show file selected
+        uploadArea.classList.add('file-selected');
+        
+        if (uploadLabel) {
+            uploadLabel.classList.add('d-none');
+        }
+        
+        if (fileInfoDisplay) {
+            fileInfoDisplay.classList.remove('d-none');
+            fileInfoDisplay.classList.add('d-flex');
+            
+            const fileNameEl = fileInfoDisplay.querySelector('.file-name');
+            const fileSizeEl = fileInfoDisplay.querySelector('.file-size');
+            
+            if (fileNameEl) fileNameEl.textContent = file.name;
+            if (fileSizeEl) fileSizeEl.textContent = formatFileSize(file.size);
+        }
+    }
+
+    // Handle remove file button clicks
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-file-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.remove-file-btn');
+            const uploadArea = btn.closest('.upload-area');
+            const fileInput = uploadArea.querySelector('.file-input');
+            
+            if (fileInput) {
+                fileInput.value = '';
+                handleFileSelect(fileInput);
+            }
+        }
+    });
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Enhanced form submission
+    uploadForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        // Check if at least one mandatory document is uploaded
+        const mandatoryDocs = document.querySelectorAll('[data-status="PENDING"] input[type="file"]');
+        let hasFiles = false;
+        
+        mandatoryDocs.forEach(input => {
+            if (input.files.length > 0) {
+                hasFiles = true;
+            }
+        });
+
+        if (!hasFiles) {
+            alert('Silakan pilih minimal satu dokumen untuk diupload.');
+            return;
+        }
+
+        // Show loading state
+        const submitBtn = uploadForm.querySelector('button[type="submit"]');
+        const originalBtnText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Mengupload...';
+
+        // Add loading class to form
+        uploadForm.classList.add('upload-loading');
+
+        const formData = new FormData(uploadForm);
+        
+        try {
+            const response = await fetch('{{ route("portal.upload", $token) }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert(result.message || 'Dokumen berhasil diupload!');
+                
+                // Reload page after 1.5 seconds to show updated status
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                throw new Error(result.message || 'Terjadi kesalahan saat upload');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            alert('Error: ' + error.message || 'Terjadi kesalahan saat upload dokumen.');
+        } finally {
+            // Remove loading state
+            uploadForm.classList.remove('upload-loading');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnText;
+        }
+    });
+
+    // Enhanced drag and drop for all upload areas
+    document.querySelectorAll('.upload-area').forEach(area => {
+        setupDragAndDrop(area);
+    });
+
+    function setupDragAndDrop(area) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            area.addEventListener(eventName, preventDefaults, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            area.addEventListener(eventName, () => area.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            area.addEventListener(eventName, () => area.classList.remove('dragover'), false);
+        });
+
+        area.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            const input = area.querySelector('.file-input');
+            
+            if (input && files.length > 0) {
+                input.files = files;
+                handleFileSelect(input);
+            }
+        }
+    }
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // Auto-save draft functionality
+    let draftTimer;
+    document.addEventListener('change', function(e) {
+        if (e.target.type === 'file') {
+            clearTimeout(draftTimer);
+            draftTimer = setTimeout(saveDraft, 2000);
+        }
+    });
+
+    function saveDraft() {
+        // This could save the current state to localStorage or send to server
+        console.log('Auto-saving draft...');
+    }
+});
+</script>

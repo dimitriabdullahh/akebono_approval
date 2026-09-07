@@ -1,0 +1,130 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: akebono_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        extensions: mbstring,xml,ctype,iconv,intl,pdo,pdo_pgsql,bcmath,gd
+        coverage: pcov
+
+    - name: Copy .env
+      run: cp .env.example .env.ci
+
+    - name: Install dependencies
+      run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Generate application key
+      run: php artisan key:generate --env=ci
+
+    - name: Run migrations
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_DATABASE: akebono_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: postgres
+        APP_ENV: testing
+      run: php artisan migrate --force
+
+    - name: Run tests
+      env:
+        DB_CONNECTION: pgsql
+        DB_HOST: localhost
+        DB_PORT: 5432
+        DB_DATABASE: akebono_test
+        DB_USERNAME: postgres
+        DB_PASSWORD: postgres
+        APP_ENV: testing
+      run: php artisan test --parallel
+
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      if: always()
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        tools: php-cs-fixer, phpstan
+
+    - name: Install dependencies
+      run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Check PHP syntax
+      run: php -l app/
+
+    - name: Run PHPStan
+      run: phpstan analyse app/
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+
+    - name: Install dependencies
+      run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Build artifacts
+      run: |
+        mkdir -p storage/logs
+        mkdir -p storage/app/documents
+        chmod -R 775 storage bootstrap/cache
+
+    - name: Create release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: release-${{ github.run_number }}
+        release_name: Release ${{ github.run_number }}
+        body: |
+          Release built from commit ${{ github.sha }}
+        draft: false
+        prerelease: false

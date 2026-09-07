@@ -1,0 +1,22 @@
+includes:
+  - ./vendor/larastan/larastan/extension.neon
+
+parameters:
+  level: 5
+  paths:
+    - app
+    - config
+  
+  exceptions:
+    uncheckedExceptionClasses:
+      - LogicException
+      - InvalidArgumentException
+  
+  ignoreErrors:
+    # Model magic properties and methods
+    - '#Call to an undefined method#'
+    - '#Undefined property#'
+
+  excludePaths:
+    - app/Console/Kernel.php
+    - app/Exceptions/Handler.php

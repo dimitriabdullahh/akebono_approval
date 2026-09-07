@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Multi-Part Render</title>
+    <style>
+        .part-section {
+            border: 2px solid blue;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .part-header {
+            background: blue;
+            color: white;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .document-list {
+            background: white;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Multi-Part Request Test</h1>
+    
+    <!-- Part 1 -->
+    <div class="part-section">
+        <div class="part-header">
+            <h2>Part 1: Brake Shoe Rear</h2>
+            <p>Part Number: AK-43A847-RR</p>
+        </div>
+        <div class="document-list">
+            <p>14 documents here...</p>
+            <ul>
+                <li>Process Flow Diagram (PFD)</li>
+                <li>Process Failure Mode dan Effect Analysis (FMEA)</li>
+                <li>Quality Control Process Chart (QCPC)</li>
+                <li>... (11 more)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Part 2 -->
+    <div class="part-section">
+        <div class="part-header">
+            <h2>Part 2: Brake Hose Rear</h2>
+            <p>Part Number: AK-56C296-FR</p>
+        </div>
+        <div class="document-list">
+            <p>14 documents here...</p>
+            <ul>
+                <li>Process Flow Diagram (PFD)</li>
+                <li>Process Failure Mode dan Effect Analysis (FMEA)</li>
+                <li>Quality Control Process Chart (QCPC)</li>
+                <li>... (11 more)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <p>If you can see both Part 1 and Part 2 above, then the issue is in the Blade template rendering, not the browser.</p>
+</body>
+</html>

@@ -1,0 +1,87 @@
+═══════════════════════════════════════════════════════════════════════
+SUPPLIER PORTAL ACCESS INFORMATION
+Generated: 21 Aug 2026 06:39:21
+═══════════════════════════════════════════════════════════════════════
+
+SUPPLIER 1
+─────────────────────────────────────────────────────────────────────
+PT Name          : PT Precision Automotive Indonesia
+Vendor Code      : SUP-TFUDDWGA
+PIC Name         : Bambang Wijaya
+PIC Email        : bambang@precision-auto.id
+PIC Phone        : 0824608164
+Model            : Transmission Assembly
+Part Number      : AT-2024-001
+Part Name        : Komponen Transmisi Otomatis
+Due Date         : 28 Aug 2026
+Total Documents  : 14 wajib + 2 optional
+Token            : gtFQKPbhXzZ0u9SnfcFkhjcbPaR838LY
+Portal URL       : http://localhost:8000/supplier/gtFQKPbhXzZ0u9SnfcFkhjcbPaR838LY
+
+SUPPLIER 2
+─────────────────────────────────────────────────────────────────────
+PT Name          : PT Mitra Teknik Presisi
+Vendor Code      : SUP-KLNSEDSW
+PIC Name         : Siti Nurhaliza
+PIC Email        : siti@mitra-teknik.co.id
+PIC Phone        : 0813141973
+Model            : Engine Block Assembly
+Part Number      : EB-2024-002
+Part Name        : Blok Mesin Otomotif
+Due Date         : 04 Sep 2026
+Total Documents  : 14 wajib + 2 optional
+Token            : nsH8ucZStdLBF8F3gaxq7pHdLVWsmaIs
+Portal URL       : http://localhost:8000/supplier/nsH8ucZStdLBF8F3gaxq7pHdLVWsmaIs
+
+SUPPLIER 3
+─────────────────────────────────────────────────────────────────────
+PT Name          : CV Inovasi Logam Terpadu
+Vendor Code      : SUP-ZYQQB3VO
+PIC Name         : Adi Wibowo
+PIC Email        : adi@inovasi-logam.id
+PIC Phone        : 0852807558
+Model            : Suspension Components
+Part Number      : SC-2024-003
+Part Name        : Komponen Suspensi Kendaraan
+Due Date         : 11 Sep 2026
+Total Documents  : 14 wajib + 2 optional
+Token            : 4ebO3Dz4wzBq4KVeBXOrYAUJOfyHKnDp
+Portal URL       : http://localhost:8000/supplier/4ebO3Dz4wzBq4KVeBXOrYAUJOfyHKnDp
+
+SUPPLIER 4
+─────────────────────────────────────────────────────────────────────
+PT Name          : PT Sentosa Manufaktur Berkah
+Vendor Code      : SUP-YQLL6S9E
+PIC Name         : Rini Kusuma Dewi
+PIC Email        : rini@sentosa-manufaktur.com
+PIC Phone        : 0863661494
+Model            : Brake System Assembly
+Part Number      : BS-2024-004
+Part Name        : Sistem Rem Terpadu
+Due Date         : 28 Aug 2026
+Total Documents  : 14 wajib + 2 optional
+Token            : YFQjQSUSZrrD4ywhsSi7BgYGIWQcexiZ
+Portal URL       : http://localhost:8000/supplier/YFQjQSUSZrrD4ywhsSi7BgYGIWQcexiZ
+
+SUPPLIER 5
+─────────────────────────────────────────────────────────────────────
+PT Name          : PT Dinamis Otomotif Indonesia
+Vendor Code      : SUP-93TIDF9R
+PIC Name         : Yudi Hermawan
+PIC Email        : yudi@dinamis-otomotif.co.id
+PIC Phone        : 0860214086
+Model            : Steering Component
+Part Number      : ST-2024-005
+Part Name        : Komponen Kemudi Presisi
+Due Date         : 04 Sep 2026
+Total Documents  : 14 wajib + 2 optional
+Token            : bUdI6j03fwG3jkUAdXDdt0eGU7rpuRtL
+Portal URL       : http://localhost:8000/supplier/bUdI6j03fwG3jkUAdXDdt0eGU7rpuRtL
+
+═══════════════════════════════════════════════════════════════════════
+TESTING NOTES:
+• Setiap supplier memiliki token unik untuk akses portal
+• Semua supplier sudah dikonfigurasi dengan dokumen yang wajib
+• Gunakan link portal untuk testing supplier portal
+• Buka file ini kembali untuk referensi akses
+═══════════════════════════════════════════════════════════════════════
