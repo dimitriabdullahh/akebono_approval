@@ -335,6 +335,48 @@ class PackagingStandardController extends Controller
     }
 
     /**
+     * Admin preview Packaging Standard form
+     */
+    public function adminPreview($psId)
+    {
+        $ps = PackagingStandard::find($psId);
+
+        if (!$ps) {
+            abort(404, 'Packaging Standard tidak ditemukan');
+        }
+
+        // Load related data
+        $ps->load(['supplier', 'requestDocument.documentRequest.supplier']);
+
+        return view('admin.forms.ps-preview', [
+            'ps' => $ps,
+        ]);
+    }
+
+    /**
+     * Admin view Packaging Standard as PDF
+     */
+    public function adminViewPdf($psId)
+    {
+        $ps = PackagingStandard::find($psId);
+
+        if (!$ps) {
+            abort(404);
+        }
+
+        // Load related data
+        $ps->load(['supplier', 'requestDocument']);
+
+        // Generate PDF using template
+        $pdf = Pdf::loadView('packaging-standard.pdf.template', [
+            'ps' => $ps,
+            'formData' => $ps->getFormDataArray(),
+        ]);
+
+        return $pdf->stream('PS-' . $ps->part_no . '.pdf');
+    }
+
+    /**
      * Get the database field name for image type
      */
     private function getImageFieldName(string $imageType): ?string

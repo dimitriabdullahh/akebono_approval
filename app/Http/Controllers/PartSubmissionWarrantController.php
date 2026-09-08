@@ -76,43 +76,66 @@ class PartSubmissionWarrantController extends Controller
         }
 
         try {
-            $data = $request->validate([
-                'part_name' => 'nullable|string|max:255',
-                'part_number' => 'nullable|string|max:255',
-                'safety_government_regulation' => 'nullable|boolean',
-                'engineering_drawing_change_level' => 'nullable|string|max:100',
-                'engineering_drawing_change_date' => 'nullable|date_format:Y-m-d',
-                'additional_engineering_changes' => 'nullable|string',
-                'additional_engineering_changes_date' => 'nullable|date_format:Y-m-d',
-                'shown_on_drawing_no' => 'nullable|string|max:255',
-                'purchase_order_no' => 'nullable|string|max:255',
-                'weight_kg' => 'nullable|numeric',
-                'checking_aid_no' => 'nullable|string|max:255',
-                'process_engineering_change_level' => 'nullable|string|max:100',
-                'process_engineering_change_date' => 'nullable|date_format:Y-m-d',
-                'supplier_name' => 'nullable|string|max:255',
-                'supplier_code' => 'nullable|string|max:100',
-                'street_address' => 'nullable|string|max:500',
-                'city' => 'nullable|string|max:100',
-                'state' => 'nullable|string|max:100',
-                'zip' => 'nullable|string|max:20',
-                'customer_name_division' => 'nullable|string|max:255',
-                'buyer_buyer_code' => 'nullable|string|max:255',
-                'application' => 'nullable|string|max:500',
-                'submission_information' => 'nullable|json',
-                'contains_prohibited_substances' => 'nullable|boolean',
-                'plastic_has_iso_marking' => 'nullable|boolean',
-                'reason_for_submission' => 'nullable|json',
-                'reason_other_text' => 'nullable|string|max:500',
-                'submission_results' => 'nullable|json',
-                'meets_all_requirements' => 'nullable|boolean',
-                'explanation_if_not_meet' => 'nullable|string',
-                'explanation_comments' => 'nullable|string',
-                'print_name' => 'nullable|string|max:255',
-                'title' => 'nullable|string|max:255',
-                'phone_no' => 'nullable|string|max:20',
-                'fax_no' => 'nullable|string|max:20',
-            ]);
+            // Prepare data - convert checkbox arrays to JSON
+            $data = [];
+            
+            // Get all input
+            $input = $request->all();
+            
+            // List of fields to include
+            $fillableFields = [
+                'part_name', 'part_number', 'safety_government_regulation',
+                'engineering_drawing_change_level', 'engineering_drawing_change_date',
+                'additional_engineering_changes', 'additional_engineering_changes_date',
+                'shown_on_drawing_no', 'purchase_order_no', 'weight_kg', 'checking_aid_no',
+                'process_engineering_change_level', 'process_engineering_change_date',
+                'supplier_name', 'supplier_code', 'street_address', 'city', 'state', 'zip',
+                'customer_name_division', 'buyer_buyer_code', 'application',
+                'contains_prohibited_substances', 'plastic_has_iso_marking',
+                'reason_other_text', 'meets_all_requirements', 'explanation_if_not_meet',
+                'explanation_comments', 'print_name', 'title', 'phone_no', 'fax_no',
+                'signature_date',
+            ];
+            
+            // Copy regular fields
+            foreach ($fillableFields as $field) {
+                if (isset($input[$field])) {
+                    $data[$field] = $input[$field];
+                }
+            }
+            
+            // Handle signature file upload or path
+            if ($request->hasFile('signature')) {
+                // Delete old signature if exists
+                if ($psw->supplier_authorized_signature && Storage::exists($psw->supplier_authorized_signature)) {
+                    Storage::delete($psw->supplier_authorized_signature);
+                }
+                // Store new signature file
+                $path = $request->file('signature')->store('psw/signatures', 'private');
+                $data['supplier_authorized_signature'] = $path;
+            } elseif (isset($input['supplier_authorized_signature']) && !empty($input['supplier_authorized_signature'])) {
+                // If signature path is provided as string (not a file upload), keep it as is
+                $data['supplier_authorized_signature'] = $input['supplier_authorized_signature'];
+            }
+            
+            // Handle JSON fields - convert arrays to JSON strings
+            if (isset($input['submission_information']) && is_array($input['submission_information'])) {
+                $data['submission_information'] = json_encode($input['submission_information']);
+            } elseif (isset($input['submission_information'])) {
+                $data['submission_information'] = $input['submission_information'];
+            }
+            
+            if (isset($input['reason_for_submission']) && is_array($input['reason_for_submission'])) {
+                $data['reason_for_submission'] = json_encode($input['reason_for_submission']);
+            } elseif (isset($input['reason_for_submission'])) {
+                $data['reason_for_submission'] = $input['reason_for_submission'];
+            }
+            
+            if (isset($input['submission_results']) && is_array($input['submission_results'])) {
+                $data['submission_results'] = json_encode($input['submission_results']);
+            } elseif (isset($input['submission_results'])) {
+                $data['submission_results'] = $input['submission_results'];
+            }
 
             // Convert boolean fields
             $data = $this->convertBooleanFields($data);
@@ -187,46 +210,67 @@ class PartSubmissionWarrantController extends Controller
         }
 
         try {
-            // First, save any form data from the request before validation
-            $data = $request->validate([
-                'part_name' => 'nullable|string|max:255',
-                'part_number' => 'nullable|string|max:255',
-                'safety_government_regulation' => 'nullable|boolean',
-                'engineering_drawing_change_level' => 'nullable|string|max:100',
-                'engineering_drawing_change_date' => 'nullable|date_format:Y-m-d',
-                'additional_engineering_changes' => 'nullable|string',
-                'additional_engineering_changes_date' => 'nullable|date_format:Y-m-d',
-                'shown_on_drawing_no' => 'nullable|string|max:255',
-                'purchase_order_no' => 'nullable|string|max:255',
-                'weight_kg' => 'nullable|numeric',
-                'checking_aid_no' => 'nullable|string|max:255',
-                'process_engineering_change_level' => 'nullable|string|max:100',
-                'process_engineering_change_date' => 'nullable|date_format:Y-m-d',
-                'supplier_name' => 'nullable|string|max:255',
-                'supplier_code' => 'nullable|string|max:100',
-                'street_address' => 'nullable|string|max:500',
-                'city' => 'nullable|string|max:100',
-                'state' => 'nullable|string|max:100',
-                'zip' => 'nullable|string|max:20',
-                'customer_name_division' => 'nullable|string|max:255',
-                'buyer_buyer_code' => 'nullable|string|max:255',
-                'application' => 'nullable|string|max:500',
-                'submission_information' => 'nullable|json',
-                'contains_prohibited_substances' => 'nullable|boolean',
-                'plastic_has_iso_marking' => 'nullable|boolean',
-                'reason_for_submission' => 'nullable|json',
-                'reason_other_text' => 'nullable|string|max:500',
-                'submission_results' => 'nullable|json',
-                'meets_all_requirements' => 'nullable|boolean',
-                'explanation_if_not_meet' => 'nullable|string',
-                'explanation_comments' => 'nullable|string',
-                'print_name' => 'nullable|string|max:255',
-                'title' => 'nullable|string|max:255',
-                'phone_no' => 'nullable|string|max:20',
-                'fax_no' => 'nullable|string|max:20',
-                'supplier_authorized_signature' => 'nullable|string',
-                'signature_date' => 'nullable|date_format:Y-m-d',
-            ]);
+            // Prepare data - convert checkbox arrays to JSON
+            $data = [];
+            
+            // Get all input
+            $input = $request->all();
+            
+            // List of fields to include
+            $fillableFields = [
+                'part_name', 'part_number', 'safety_government_regulation',
+                'engineering_drawing_change_level', 'engineering_drawing_change_date',
+                'additional_engineering_changes', 'additional_engineering_changes_date',
+                'shown_on_drawing_no', 'purchase_order_no', 'weight_kg', 'checking_aid_no',
+                'process_engineering_change_level', 'process_engineering_change_date',
+                'supplier_name', 'supplier_code', 'street_address', 'city', 'state', 'zip',
+                'customer_name_division', 'buyer_buyer_code', 'application',
+                'contains_prohibited_substances', 'plastic_has_iso_marking',
+                'reason_other_text', 'meets_all_requirements', 'explanation_if_not_meet',
+                'explanation_comments', 'print_name', 'title', 'phone_no', 'fax_no',
+                'signature_date',
+            ];
+            
+            // Copy regular fields
+            foreach ($fillableFields as $field) {
+                if (isset($input[$field])) {
+                    $data[$field] = $input[$field];
+                }
+            }
+            
+            // Handle signature file upload or path
+            if ($request->hasFile('signature')) {
+                // Delete old signature if exists
+                if ($psw->supplier_authorized_signature && Storage::exists($psw->supplier_authorized_signature)) {
+                    Storage::delete($psw->supplier_authorized_signature);
+                }
+                // Store new signature file
+                $path = $request->file('signature')->store('psw/signatures', 'private');
+                $data['supplier_authorized_signature'] = $path;
+            } elseif (isset($input['supplier_authorized_signature']) && !empty($input['supplier_authorized_signature'])) {
+                // If signature path is provided as string (not a file upload), keep it as is
+                // This handles cases where signature is already stored
+                $data['supplier_authorized_signature'] = $input['supplier_authorized_signature'];
+            }
+            
+            // Handle JSON fields - convert arrays to JSON strings
+            if (isset($input['submission_information']) && is_array($input['submission_information'])) {
+                $data['submission_information'] = json_encode($input['submission_information']);
+            } elseif (isset($input['submission_information'])) {
+                $data['submission_information'] = $input['submission_information'];
+            }
+            
+            if (isset($input['reason_for_submission']) && is_array($input['reason_for_submission'])) {
+                $data['reason_for_submission'] = json_encode($input['reason_for_submission']);
+            } elseif (isset($input['reason_for_submission'])) {
+                $data['reason_for_submission'] = $input['reason_for_submission'];
+            }
+            
+            if (isset($input['submission_results']) && is_array($input['submission_results'])) {
+                $data['submission_results'] = json_encode($input['submission_results']);
+            } elseif (isset($input['submission_results'])) {
+                $data['submission_results'] = $input['submission_results'];
+            }
 
             // Convert boolean fields
             $data = $this->convertBooleanFields($data);
@@ -318,6 +362,48 @@ class PartSubmissionWarrantController extends Controller
         ]);
 
         return $pdf->download('PSW-' . $psw->part_number . '-' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Admin preview PSW form
+     */
+    public function adminPreview($pswId)
+    {
+        $psw = PartSubmissionWarrant::find($pswId);
+
+        if (!$psw) {
+            abort(404, 'PSW tidak ditemukan');
+        }
+
+        // Load related data
+        $psw->load(['supplier', 'requestDocument.documentRequest.supplier']);
+
+        return view('admin.forms.psw-preview', [
+            'psw' => $psw,
+        ]);
+    }
+
+    /**
+     * Admin view PSW as PDF
+     */
+    public function adminViewPdf($pswId)
+    {
+        $psw = PartSubmissionWarrant::find($pswId);
+
+        if (!$psw) {
+            abort(404);
+        }
+
+        // Load related data
+        $psw->load(['supplier', 'requestDocument']);
+
+        // Generate PDF using template
+        $pdf = Pdf::loadView('part-submission-warrant.pdf.template', [
+            'psw' => $psw,
+            'formData' => $psw->getFormDataArray(),
+        ]);
+
+        return $pdf->stream('PSW-' . $psw->part_number . '.pdf');
     }
 
     /**

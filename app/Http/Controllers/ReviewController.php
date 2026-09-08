@@ -64,8 +64,11 @@ class ReviewController extends Controller
             'histories.actor',
         ]);
 
-        // Load Inspection Standard data if this is an IS document
+        // Load form-based document data based on document type
         $inspectionStandard = null;
+        $packagingStandard = null;
+        $partSubmissionWarrant = null;
+
         if ($requestDocument->documentType->code === 'IS') {
             $inspectionStandard = $requestDocument->inspectionStandard;
             if ($inspectionStandard) {
@@ -75,12 +78,28 @@ class ReviewController extends Controller
                     'supplier',
                 ]);
             }
+        } elseif ($requestDocument->documentType->code === 'PACKAGING_STANDARD') {
+            $packagingStandard = $requestDocument->packagingStandard;
+            if ($packagingStandard) {
+                $packagingStandard->load(['supplier']);
+            }
+        } elseif ($requestDocument->documentType->code === 'PSW') {
+            $partSubmissionWarrant = $requestDocument->partSubmissionWarrant;
+            if ($partSubmissionWarrant) {
+                $partSubmissionWarrant->load(['supplier']);
+            }
         }
 
         $user = auth()->user();
         $userScope = $user->getReviewScope();
 
-        return view('admin.review.show', compact('requestDocument', 'userScope', 'inspectionStandard'));
+        return view('admin.review.show', compact(
+            'requestDocument', 
+            'userScope', 
+            'inspectionStandard',
+            'packagingStandard',
+            'partSubmissionWarrant'
+        ));
     }
 
     /**

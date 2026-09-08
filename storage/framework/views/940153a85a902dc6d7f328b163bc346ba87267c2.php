@@ -43,9 +43,12 @@
                         <div class="d-flex gap-2 align-items-center">
                             <?php
                                 $isPdf = false;
-                                if ($inspectionStandard && $inspectionStandard->pdf_file_path) {
+                                // Check for form-based documents
+                                if ($packagingStandard || $partSubmissionWarrant) {
+                                    $isPdf = false; // Form-based docs don't use PDF viewer
+                                } elseif ($inspectionStandard && $inspectionStandard->pdf_file_path) {
                                     $isPdf = str_ends_with($inspectionStandard->pdf_file_path, '.pdf');
-                                } elseif ($requestDocument->file_path) {
+                                } elseif ($requestDocument->file_path && $requestDocument->file_path !== 'form') {
                                     $isPdf = str_ends_with($requestDocument->file_path, '.pdf');
                                 }
                             ?>
@@ -80,7 +83,21 @@
                                    download>
                                     <i class="ti ti-download me-1"></i>Download PDF
                                 </a>
-                            <?php elseif($requestDocument->file_path): ?>
+                            <?php elseif($packagingStandard): ?>
+                                <a href="<?php echo e(route('admin.forms.ps.pdf', $packagingStandard->id)); ?>" 
+                                   class="btn btn-sm btn-success" 
+                                   target="_blank"
+                                   title="View PDF">
+                                    <i class="ti ti-file-pdf me-1"></i>View PDF
+                                </a>
+                            <?php elseif($partSubmissionWarrant): ?>
+                                <a href="<?php echo e(route('admin.forms.psw.pdf', $partSubmissionWarrant->id)); ?>" 
+                                   class="btn btn-sm btn-success" 
+                                   target="_blank"
+                                   title="View PDF">
+                                    <i class="ti ti-file-pdf me-1"></i>View PDF
+                                </a>
+                            <?php elseif($requestDocument->file_path && $requestDocument->file_path !== 'form'): ?>
                                 <a href="<?php echo e(Storage::disk('public')->url($requestDocument->file_path)); ?>" 
                                    class="btn btn-sm btn-success" 
                                    title="Download PDF"
@@ -108,7 +125,16 @@
                                 <p class="mt-3">Tipe file tidak didukung untuk preview</p>
                             </div>
                         <?php endif; ?>
-                    <?php elseif($requestDocument->file_path): ?>
+                    <?php elseif($packagingStandard || $partSubmissionWarrant): ?>
+                        <!-- Form-Based Document Preview (PS/PSW) -->
+                        <div style="width: 100%; height: 100%; overflow-y: auto; background: white;">
+                            <?php if($packagingStandard): ?>
+                                <?php echo $__env->make('admin.forms.ps-preview-embed', ['ps' => $packagingStandard], \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                            <?php elseif($partSubmissionWarrant): ?>
+                                <?php echo $__env->make('admin.forms.psw-preview-embed', ['psw' => $partSubmissionWarrant], \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+                            <?php endif; ?>
+                        </div>
+                    <?php elseif($requestDocument->file_path && $requestDocument->file_path !== 'form'): ?>
                         <?php if(str_ends_with($requestDocument->file_path, '.pdf')): ?>
                             <!-- PDF Viewer -->
                             <div id="pdfContainer" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">

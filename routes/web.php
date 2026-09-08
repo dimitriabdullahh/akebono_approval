@@ -289,6 +289,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })
         ->name('admin.documents.history')
         ->middleware('internal_admin');
+
+    // Admin review routes for PSW and PS forms
+    Route::prefix('admin/forms')->name('admin.forms.')->middleware('internal_admin')->group(function () {
+        // PSW form preview/review
+        Route::get('/psw/{pswId}', [\App\Http\Controllers\PartSubmissionWarrantController::class, 'adminPreview'])
+            ->name('psw.preview');
+        
+        Route::get('/psw/{pswId}/pdf', [\App\Http\Controllers\PartSubmissionWarrantController::class, 'adminViewPdf'])
+            ->name('psw.pdf');
+        
+        // PS form preview/review
+        Route::get('/packaging-standard/{psId}', [\App\Http\Controllers\PackagingStandardController::class, 'adminPreview'])
+            ->name('ps.preview');
+        
+        Route::get('/packaging-standard/{psId}/pdf', [\App\Http\Controllers\PackagingStandardController::class, 'adminViewPdf'])
+            ->name('ps.pdf');
+    });
 });
 
 // Part Submission Warrant (PSW) Form routes (token-based, no auth required)

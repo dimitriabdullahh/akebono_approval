@@ -41,9 +41,12 @@
                         <div class="d-flex gap-2 align-items-center">
                             @php
                                 $isPdf = false;
-                                if ($inspectionStandard && $inspectionStandard->pdf_file_path) {
+                                // Check for form-based documents
+                                if ($packagingStandard || $partSubmissionWarrant) {
+                                    $isPdf = false; // Form-based docs don't use PDF viewer
+                                } elseif ($inspectionStandard && $inspectionStandard->pdf_file_path) {
                                     $isPdf = str_ends_with($inspectionStandard->pdf_file_path, '.pdf');
-                                } elseif ($requestDocument->file_path) {
+                                } elseif ($requestDocument->file_path && $requestDocument->file_path !== 'form') {
                                     $isPdf = str_ends_with($requestDocument->file_path, '.pdf');
                                 }
                             @endphp
@@ -78,7 +81,21 @@
                                    download>
                                     <i class="ti ti-download me-1"></i>Download PDF
                                 </a>
-                            @elseif($requestDocument->file_path)
+                            @elseif($packagingStandard)
+                                <a href="{{ route('admin.forms.ps.pdf', $packagingStandard->id) }}" 
+                                   class="btn btn-sm btn-success" 
+                                   target="_blank"
+                                   title="View PDF">
+                                    <i class="ti ti-file-pdf me-1"></i>View PDF
+                                </a>
+                            @elseif($partSubmissionWarrant)
+                                <a href="{{ route('admin.forms.psw.pdf', $partSubmissionWarrant->id) }}" 
+                                   class="btn btn-sm btn-success" 
+                                   target="_blank"
+                                   title="View PDF">
+                                    <i class="ti ti-file-pdf me-1"></i>View PDF
+                                </a>
+                            @elseif($requestDocument->file_path && $requestDocument->file_path !== 'form')
                                 <a href="{{ Storage::disk('public')->url($requestDocument->file_path) }}" 
                                    class="btn btn-sm btn-success" 
                                    title="Download PDF"
@@ -106,7 +123,16 @@
                                 <p class="mt-3">Tipe file tidak didukung untuk preview</p>
                             </div>
                         @endif
-                    @elseif($requestDocument->file_path)
+                    @elseif($packagingStandard || $partSubmissionWarrant)
+                        <!-- Form-Based Document Preview (PS/PSW) -->
+                        <div style="width: 100%; height: 100%; overflow-y: auto; background: white;">
+                            @if($packagingStandard)
+                                @include('admin.forms.ps-preview-embed', ['ps' => $packagingStandard])
+                            @elseif($partSubmissionWarrant)
+                                @include('admin.forms.psw-preview-embed', ['psw' => $partSubmissionWarrant])
+                            @endif
+                        </div>
+                    @elseif($requestDocument->file_path && $requestDocument->file_path !== 'form')
                         @if(str_ends_with($requestDocument->file_path, '.pdf'))
                             <!-- PDF Viewer -->
                             <div id="pdfContainer" style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center;">
