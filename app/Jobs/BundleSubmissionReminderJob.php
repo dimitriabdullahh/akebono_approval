@@ -123,35 +123,46 @@ class BundleSubmissionReminderJob implements ShouldQueue
             'last_reminder_at' => $now,
         ];
 
-        // Update timestamp berdasarkan level
+        // Tentukan next level dan delay
+        $nextLevel = $this->level;
+        $escalationDelay = config('reminder.escalation_delay', 2);
+
+        // Update timestamp berdasarkan level yang baru saja dikirim
         switch ($this->level) {
             case 1:
                 $updates['pic_reminder_sent_at'] = $now;
                 $updates['initial_reminder_sent_at'] = $now;
+                $nextLevel = 2;
                 break;
             case 2:
                 $updates['supervisor_escalation_sent_at'] = $now;
+                $nextLevel = 3;
                 break;
             case 3:
                 $updates['head_dept_escalation_sent_at'] = $now;
+                $nextLevel = 4;
                 break;
             case 4:
                 $updates['gm_escalation_sent_at'] = $now;
+                $nextLevel = 5;
                 break;
             case 5:
                 $updates['director_escalation_sent_at'] = $now;
                 $updates['escalation_status'] = 'ESCALATED_TO_DIRECTOR';
                 $updates['next_reminder_at'] = null; // Sudah level maksimal, stop
+                $nextLevel = 5; // Tetap di level 5, tidak ada level berikutnya
                 break;
         }
 
-        // Set next reminder time jika belum level maksimal
+        // Set next reminder time dan level untuk reminder berikutnya
         if ($this->level < 5) {
-            $escalationDelay = config('reminder.escalation_delay', 2);
+            // Ada level berikutnya, schedule untuk dikirim di masa depan
             $updates['next_reminder_at'] = now()->addMinutes($escalationDelay);
-            $updates['reminder_level'] = $this->level + 1; // Increment ke level berikutnya
+            $updates['reminder_level'] = $nextLevel;
         } else {
-            $updates['reminder_level'] = 5; // Tetap di level 5
+            // Sudah level maksimal, tidak ada reminder lagi
+            $updates['reminder_level'] = 5;
+            $updates['next_reminder_at'] = null;
         }
 
         $this->reminder->update($updates);
@@ -159,8 +170,9 @@ class BundleSubmissionReminderJob implements ShouldQueue
         Log::info("BundleSubmissionReminder: Reminder updated for next level", [
             'request_id' => $this->documentRequest->id,
             'current_level' => $this->level,
-            'next_level' => $updates['reminder_level'] ?? $this->level,
+            'next_level' => $nextLevel,
             'next_reminder_at' => $updates['next_reminder_at'] ?? null,
+            'escalation_status' => $updates['escalation_status'] ?? 'WAITING',
             'total_parts' => $overallProgress['total_parts'],
             'submitted_parts' => $overallProgress['submitted_parts'],
             'draft_parts' => $overallProgress['draft_parts'],

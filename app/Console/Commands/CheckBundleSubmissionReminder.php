@@ -111,16 +111,13 @@ class CheckBundleSubmissionReminder extends Command
     private function checkExistingReminders()
     {
         // Cari reminder yang:
-        // 1. Status WAITING (belum stopped)
-        // 2. next_reminder_at sudah lewat
-        // 3. Belum sampai level maksimal ATAU belum escalated to director
+        // 1. Status WAITING (belum stopped, belum escalated to director)
+        // 2. next_reminder_at sudah lewat (atau null tapi ready untuk kirim)
+        // 3. reminder_level masih < 5 (belum maksimal) ATAU belum direview ulang untuk escalation
         $readyReminders = DocumentRequestReminder::where('escalation_status', 'WAITING')
             ->whereNotNull('next_reminder_at')
             ->where('next_reminder_at', '<=', now())
-            ->where(function ($query) {
-                $query->where('reminder_level', '<', 5)
-                    ->orWhere('escalation_status', '!=', 'ESCALATED_TO_DIRECTOR');
-            })
+            ->where('reminder_level', '<=', 5)  // Level valid: 1-5
             ->with('documentRequest.requestParts')
             ->get();
 
@@ -151,7 +148,7 @@ class CheckBundleSubmissionReminder extends Command
             }
 
             $overallProgress = $reminder->getOverallProgressInfo();
-            $this->line("  📧 Request #{$request->id} (Model: {$request->model}) - Sending escalation level {$levelToSend} (Parts: {$overallProgress['submitted_parts']}/{$overallProgress['total_parts']} submitted, Docs: {$overallProgress['uploaded_documents']}/{$overallProgress['total_documents']})");
+            $this->line("  📧 Request #{$request->id} (Model: {$request->model}) - Sending level {$levelToSend} (Parts: {$overallProgress['submitted_parts']}/{$overallProgress['total_parts']} submitted, Docs: {$overallProgress['uploaded_documents']}/{$overallProgress['total_documents']})");
 
             // Dispatch job
             BundleSubmissionReminderJob::dispatch($request, $reminder, $levelToSend);

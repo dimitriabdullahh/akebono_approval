@@ -83,18 +83,22 @@ class DocumentRequestReminder extends Model
      */
     public function isReadyForNextReminder(): bool
     {
+        // Jika sudah dihentikan, tidak ready
         if ($this->isStopped()) {
             return false;
         }
 
-        if ($this->isMaxEscalation() && $this->escalation_status === 'ESCALATED_TO_DIRECTOR') {
+        // Jika sudah escalated to director, tidak ada reminder lagi
+        if ($this->escalation_status === 'ESCALATED_TO_DIRECTOR') {
             return false;
         }
 
+        // Jika next_reminder_at belum diset, tidak ready
         if ($this->next_reminder_at === null) {
             return false;
         }
 
+        // Siap jika sekarang sudah melewati next_reminder_at
         return now()->gte($this->next_reminder_at);
     }
 

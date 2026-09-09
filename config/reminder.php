@@ -9,8 +9,8 @@ return [
     | Configuration untuk reminder dan escalation ketika supplier belum
     | mengirimkan dokumen sama sekali.
     |
-    | TESTING MODE: 3 minutes initial, 2 minutes escalation
-    | PRODUCTION MODE: Ubah ke 1 day atau sesuai kebutuhan bisnis
+    | TESTING MODE: 1 minute initial, 1 minute escalation
+    | PRODUCTION MODE: Ubah ke 1440 (1 day) atau sesuai kebutuhan bisnis
     |
     */
 
@@ -22,11 +22,11 @@ return [
     | Waktu tunggu setelah request dibuat sebelum mengirim reminder pertama
     | ke PIC Supplier.
     |
-    | TESTING: 3
+    | TESTING: 1
     | PRODUCTION: 1440 (1 day)
     |
     */
-    'initial_reminder_delay' => env('REMINDER_INITIAL_DELAY', 3),
+    'initial_reminder_delay' => env('REMINDER_INITIAL_DELAY', 0),
 
     /*
     |--------------------------------------------------------------------------
@@ -35,11 +35,11 @@ return [
     |
     | Waktu tunggu antara setiap level escalation.
     |
-    | TESTING: 2
+    | TESTING: 1
     | PRODUCTION: 1440 (1 day)
     |
     */
-    'escalation_delay' => env('REMINDER_ESCALATION_DELAY', 2),
+    'escalation_delay' => env('REMINDER_ESCALATION_DELAY', 1),
 
     /*
     |--------------------------------------------------------------------------
