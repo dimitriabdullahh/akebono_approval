@@ -297,13 +297,28 @@ document.addEventListener('DOMContentLoaded', function() {
     filterTable();
 });
 
+@push('scripts')
+<script>
 // Resend Email Functionality
 let currentRequestId = null;
-const resendModal = new bootstrap.Modal(document.getElementById('resendEmailModal'));
+let resendModal = null;
+
+function getResendModal() {
+    if (!resendModal) {
+        const modalEl = document.getElementById('resendEmailModal');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            resendModal = new bootstrap.Modal(modalEl);
+        }
+    }
+    return resendModal;
+}
 
 function resendEmail(requestId) {
     currentRequestId = requestId;
-    resendModal.show();
+    const modal = getResendModal();
+    if (modal) {
+        modal.show();
+    }
 }
 
 function confirmResendEmail() {
@@ -314,21 +329,30 @@ function confirmResendEmail() {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
         },
     })
-    .then(response => response.json())
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Gagal mengirim email.');
+        }
+        return data;
+    })
     .then(data => {
-        resendModal.hide();
+        const modal = getResendModal();
+        if (modal) modal.hide();
         
         // Show success toast
-        showToastNotification('success', 'Email berhasil dikirim ulang ke supplier!');
+        showToastNotification('success', data.message || 'Email berhasil dikirim ulang ke supplier!');
         
         // Optional: Reload table or update specific row
         setTimeout(() => location.reload(), 1500);
     })
     .catch(error => {
-        resendModal.hide();
-        showToastNotification('error', 'Gagal mengirim email. Silakan coba lagi.');
+        const modal = getResendModal();
+        if (modal) modal.hide();
+        showToastNotification('error', error.message || 'Gagal mengirim email. Silakan coba lagi.');
         console.error('Error:', error);
     });
 }
@@ -448,8 +472,11 @@ function showToastNotification(type, message) {
     toastElement.innerHTML = toastHtml;
     toastContainer.appendChild(toastElement.firstElementChild);
 
-    const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'));
-    toast.show();
+    if (typeof bootstrap !== 'undefined') {
+        const toast = new bootstrap.Toast(toastContainer.querySelector('.toast:last-child'));
+        toast.show();
+    }
 }
 </script>
+@endpush
 @endsection

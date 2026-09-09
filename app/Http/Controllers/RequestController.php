@@ -147,14 +147,34 @@ class RequestController extends Controller
     {
         // Check permission untuk trigger ulang notifikasi
         if (!auth()->user()->canTriggerNotification()) {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses untuk mengirim ulang email notifikasi'
+                ], 403);
+            }
             abort(403, 'Anda tidak memiliki akses untuk mengirim ulang email notifikasi');
         }
 
         try {
             $this->requestService->resendRequestLetter($documentRequest->id);
 
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Surat request berhasil dikirim ulang ke supplier'
+                ]);
+            }
+
             return back()->with('success', 'Surat request berhasil dikirim ulang ke supplier');
         } catch (\Exception $e) {
+            if (request()->wantsJson() || request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengirim ulang surat request: ' . $e->getMessage()
+                ], 500);
+            }
+
             return back()->with('error', 'Gagal mengirim ulang surat request: ' . $e->getMessage());
         }
     }

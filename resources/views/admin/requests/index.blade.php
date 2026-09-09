@@ -198,14 +198,28 @@
     </div>
 </div>
 
+@push('scripts')
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 let currentRequestId = null;
-const resendModal = new bootstrap.Modal(document.getElementById('resendEmailModal'));
+let resendModal = null;
+
+function getResendModal() {
+    if (!resendModal) {
+        const modalEl = document.getElementById('resendEmailModal');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            resendModal = new bootstrap.Modal(modalEl);
+        }
+    }
+    return resendModal;
+}
 
 function resendEmail(requestId) {
     currentRequestId = requestId;
-    resendModal.show();
+    const modal = getResendModal();
+    if (modal) {
+        modal.show();
+    }
 }
 
 function confirmResendEmail() {
@@ -216,21 +230,30 @@ function confirmResendEmail() {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
         },
     })
-    .then(response => response.json())
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Gagal mengirim email.');
+        }
+        return data;
+    })
     .then(data => {
-        resendModal.hide();
+        const modal = getResendModal();
+        if (modal) modal.hide();
         
         // Show success toast
-        showToast('success', 'Email berhasil dikirim ulang ke supplier!');
+        showToast('success', data.message || 'Email berhasil dikirim ulang ke supplier!');
         
         // Optional: Reload table or update specific row
         setTimeout(() => location.reload(), 1500);
     })
     .catch(error => {
-        resendModal.hide();
-        showToast('error', 'Gagal mengirim email. Silakan coba lagi.');
+        const modal = getResendModal();
+        if (modal) modal.hide();
+        showToast('error', error.message || 'Gagal mengirim email. Silakan coba lagi.');
         console.error('Error:', error);
     });
 }
@@ -341,16 +364,21 @@ function showToast(type, message) {
     toastElement.innerHTML = toastHtml;
     toastContainer.appendChild(toastElement.firstElementChild);
 
-    const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'));
-    toast.show();
+    if (typeof bootstrap !== 'undefined') {
+        const toast = new bootstrap.Toast(toastContainer.querySelector('.toast:last-child'));
+        toast.show();
+    }
 }
 
 // Initialize tooltips
 document.addEventListener('DOMContentLoaded', function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
+    if (typeof bootstrap !== 'undefined') {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
 });
 </script>
+@endpush
 @endsection

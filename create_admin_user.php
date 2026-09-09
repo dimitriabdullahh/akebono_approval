@@ -17,7 +17,7 @@ if ($user) {
         'name' => 'Admin QA',
         'email' => 'admin@akebono.local',
         'password' => bcrypt('password'),
-        'role' => 'qa',
+        'role' => 'admin_qa',
     ]);
     echo "✓ User berhasil dibuat: admin@akebono.local / password\n";
 }

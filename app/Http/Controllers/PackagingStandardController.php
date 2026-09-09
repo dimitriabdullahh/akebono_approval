@@ -306,7 +306,7 @@ class PackagingStandardController extends Controller
         $pdf = Pdf::loadView('packaging-standard.pdf.template', [
             'ps' => $ps,
             'formData' => $ps->getFormDataArray(),
-        ]);
+        ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('PS-' . $ps->part_no . '.pdf');
     }
@@ -329,7 +329,7 @@ class PackagingStandardController extends Controller
         $pdf = Pdf::loadView('packaging-standard.pdf.template', [
             'ps' => $ps,
             'formData' => $ps->getFormDataArray(),
-        ]);
+        ])->setPaper('a4', 'landscape');
 
         return $pdf->download('PS-' . $ps->part_no . '-' . now()->format('Y-m-d') . '.pdf');
     }
@@ -371,7 +371,7 @@ class PackagingStandardController extends Controller
         $pdf = Pdf::loadView('packaging-standard.pdf.template', [
             'ps' => $ps,
             'formData' => $ps->getFormDataArray(),
-        ]);
+        ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('PS-' . $ps->part_no . '.pdf');
     }

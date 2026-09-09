@@ -279,11 +279,25 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
-const resendModal = new bootstrap.Modal(document.getElementById('resendEmailModal'));
+let resendModal = null;
+
+function getResendModal() {
+    if (!resendModal) {
+        const modalEl = document.getElementById('resendEmailModal');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            resendModal = new bootstrap.Modal(modalEl);
+        }
+    }
+    return resendModal;
+}
 
 function resendEmail() {
-    resendModal.show();
+    const modal = getResendModal();
+    if (modal) {
+        modal.show();
+    }
 }
 
 function confirmResendEmail() {
@@ -292,16 +306,25 @@ function confirmResendEmail() {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
         },
     })
-    .then(response => response.json())
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.message || 'Gagal mengirim email.');
+        }
+        return data;
+    })
     .then(data => {
-        resendModal.hide();
-        showToast('success', 'Email berhasil dikirim ulang ke supplier!');
+        const modal = getResendModal();
+        if (modal) modal.hide();
+        showToast('success', data.message || 'Email berhasil dikirim ulang ke supplier!');
     })
     .catch(error => {
-        resendModal.hide();
-        showToast('error', 'Gagal mengirim email. Silakan coba lagi.');
+        const modal = getResendModal();
+        if (modal) modal.hide();
+        showToast('error', error.message || 'Gagal mengirim email. Silakan coba lagi.');
         console.error('Error:', error);
     });
 }
@@ -330,10 +353,13 @@ function showToast(type, message) {
     toastElement.innerHTML = toastHtml;
     toastContainer.appendChild(toastElement.firstElementChild);
 
-    const toast = new bootstrap.Toast(toastContainer.querySelector('.toast'));
-    toast.show();
+    if (typeof bootstrap !== 'undefined') {
+        const toast = new bootstrap.Toast(toastContainer.querySelector('.toast:last-child'));
+        toast.show();
+    }
 }
 </script>
+@endpush
 
 <style>
 /* Enhanced button styles for view and download actions */
