@@ -53,6 +53,7 @@ class RequestService
         // Create document request
         $request = DocumentRequest::create([
             'supplier_id' => $data['supplier_id'],
+            'category' => $data['category'] ?? null,
             'model' => $data['model'],
             'due_date' => $data['due_date'],
             'access_token' => $accessToken,
@@ -100,7 +101,7 @@ class RequestService
      */
     public function getAllRequests(array $filters = [])
     {
-        $query = DocumentRequest::with(['supplier', 'requestDocuments.documentType', 'creator'])
+        $query = DocumentRequest::with(['supplier', 'requestDocuments.documentType'])
             ->orderByDesc('created_at');
 
         if (!empty($filters['supplier_id'])) {
@@ -134,8 +135,10 @@ class RequestService
             'requestDocuments.documentType',
             'requestDocuments.histories',
             'requestDocuments.reviewer',
-            'notificationLogs',
-            'creator'
+            'requestDocuments.inspectionStandard',
+            'requestDocuments.packagingStandard',
+            'requestDocuments.partSubmissionWarrant',
+            'notificationLogs'
         ])->find($id);
     }
 

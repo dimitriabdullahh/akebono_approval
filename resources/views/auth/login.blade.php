@@ -223,13 +223,13 @@
 
                     <div class="form-group">
                         <label for="email" class="form-label">
-                            <i class="ti ti-mail me-1"></i>Email Address
+                            <i class="ti ti-user me-1"></i>NPK atau Email
                         </label>
                         <div class="input-icon">
-                            <input type="email" class="form-control @error('email') error-input @enderror" 
+                            <input type="text" class="form-control @error('email') error-input @enderror" 
                                    id="email" name="email" value="{{ old('email') }}" 
-                                   placeholder="admin@akebono.local" required autofocus>
-                            <i class="ti ti-mail"></i>
+                                   placeholder="Masukkan NPK atau email" required autofocus>
+                            <i class="ti ti-user"></i>
                         </div>
                         <div class="error-text" id="emailError">{{ $errors->first('email') }}</div>
                     </div>
@@ -314,10 +314,10 @@
             const password = document.getElementById('password').value;
             let isValid = true;
 
-            // Email validation
-            if (!email || !email.includes('@')) {
+            // NPK or Email validation
+            if (!email || email.length < 3) {
                 document.getElementById('email').classList.add('error-input');
-                document.getElementById('emailError').textContent = 'Masukkan email yang valid';
+                document.getElementById('emailError').textContent = 'Masukkan NPK atau email yang valid';
                 document.getElementById('emailError').style.display = 'block';
                 isValid = false;
             } else {

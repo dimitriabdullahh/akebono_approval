@@ -14,11 +14,12 @@ class DashboardController extends Controller
 
     public function __construct(DashboardService $dashboardService, RequestService $requestService)
     {
-        $this->middleware('auth');
+        // Remove 'auth' middleware since 'internal_admin' already checks authentication
         $this->middleware('internal_admin');
         
         // Dashboard monitoring dengan hak akses yang sudah disamakan:
         // - Semua admin internal (QA, Purchasing, PPC): Full Access
+        // - Employee (QA, PCC, Purchasing): Full Access
         $this->dashboardService = $dashboardService;
         $this->requestService = $requestService;
     }
@@ -29,8 +30,11 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
-        $user = auth()->user();
-        $isFullAccess = $user->hasDashboardFullAccess(); // Semua admin internal memiliki full access
+        // Support both User (legacy admin) and Employee (new system)
+        $user = auth()->user(); // Legacy admin
+        $employee = auth()->guard('employee')->user(); // New employee system
+        
+        $isFullAccess = true; // All internal users have full access
         
         // Get all requests untuk ditampilkan di dashboard
         $requests = $this->requestService->getAllRequests(
@@ -39,10 +43,14 @@ class DashboardController extends Controller
 
         $suppliers = Supplier::all();
 
+        // Pass employee data to view if logged in as employee
+        $currentEmployee = $employee;
+
         return view('admin.dashboard.index', compact(
             'requests',
             'suppliers',
-            'isFullAccess'
+            'isFullAccess',
+            'currentEmployee'
         ));
     }
 

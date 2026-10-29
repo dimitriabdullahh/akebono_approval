@@ -249,10 +249,12 @@ class InspectionStandard extends Model
                 'customer' => 'AAIJ (Purchasing & Quality Division)',
             ],
             'drawings' => $this->drawings->map(function($d) {
+                // Extract revision to variable to avoid parse error
+                $rev = $d->revision;
                 return [
                     'drawingName' => $d->drawing_name,
                     'drawingNo' => $d->drawing_no,
-                    'revision' => $d->revision,
+                    'revision' => $rev,
                     'description' => $d->description,
                     'filePath' => $d->file_path,
                 ];

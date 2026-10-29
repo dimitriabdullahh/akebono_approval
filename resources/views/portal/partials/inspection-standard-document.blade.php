@@ -3,7 +3,17 @@
     Props: $doc (RequestDocument), $token
 --}}
 
-<div class="card mb-3 document-card inspection-standard-card" data-status="{{ $inspectionStandard?->status ?? $doc->status }}">
+@php
+    // SINGLE SOURCE OF TRUTH: Ambil status dari tabel inspection_standards
+    $inspectionStandard = $doc->inspectionStandard;
+    if (!$inspectionStandard) {
+        $inspectionStandard = \App\Models\InspectionStandard::where('request_document_id', $doc->id)->first();
+    }
+    // Status diambil dari inspection_standards.status, bukan request_documents.status
+    $currentStatus = $inspectionStandard?->status ?? 'PENDING';
+@endphp
+
+<div class="card mb-3 document-card inspection-standard-card" data-status="{{ $currentStatus }}">
     <div class="card-body">
         <div class="row align-items-center">
             <div class="col-md-8">
@@ -35,7 +45,7 @@
                             </div>
                         @endif
 
-                        {{-- Status Badges --}}
+                        {{-- Status Badges berdasarkan inspection_standards.status --}}
                         <div class="d-flex align-items-center gap-2 mb-3">
                             @if($doc->documentType->is_mandatory)
                                 <span class="badge bg-danger">MANDATORY</span>
@@ -43,20 +53,15 @@
                                 <span class="badge bg-secondary">OPTIONAL</span>
                             @endif
 
-                            @php
-                                $inspectionStandard = $doc->inspectionStandard ?? \App\Models\InspectionStandard::where('request_document_id', $doc->id)->first();
-                                $currentStatus = $inspectionStandard?->status ?? $doc->status;
-                            @endphp
-
                             @if($currentStatus === 'DRAFT')
                                 <span class="badge bg-secondary">DRAFT</span>
-                            @elseif($doc->status === 'PENDING')
+                            @elseif($currentStatus === 'PENDING')
                                 <span class="badge bg-warning">PENDING</span>
-                            @elseif($doc->status === 'SUBMITTED')
+                            @elseif($currentStatus === 'SUBMITTED' || $currentStatus === 'PENDING_REVIEW')
                                 <span class="badge bg-info">SUBMITTED</span>
-                            @elseif($doc->status === 'APPROVED')
+                            @elseif($currentStatus === 'APPROVED')
                                 <span class="badge bg-success">APPROVED</span>
-                            @elseif($doc->status === 'REVISE')
+                            @elseif($currentStatus === 'REVISE' || $currentStatus === 'REJECTED')
                                 <span class="badge bg-danger">REVISE REQUIRED</span>
                             @endif
                         </div>
@@ -79,12 +84,12 @@
                         @endif
 
                         {{-- Submission Info --}}
-                        @if(in_array($doc->status, ['SUBMITTED', 'APPROVED']))
+                        @if(in_array($currentStatus, ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']))
                         <div class="alert alert-success mt-3 mb-0 py-2">
                             <i class="ti ti-check-circle me-2"></i>
-                            <strong>Status: {{ $doc->status === 'APPROVED' ? 'DISETUJUI' : 'DISUBMIT' }}</strong>
+                            <strong>Status: {{ $currentStatus === 'APPROVED' ? 'DISETUJUI' : 'DISUBMIT' }}</strong>
                             <br>
-                            <small>Disubmit: {{ $doc->submitted_at?->format('d M Y H:i') }}</small>
+                            <small>Disubmit: {{ $inspectionStandard?->submitted_at?->format('d M Y H:i') ?? '-' }}</small>
                         </div>
                         @endif
                     </div>
@@ -92,35 +97,33 @@
             </div>
 
             <div class="col-md-4">
-                {{-- Action Buttons --}}
-                @php
-                    $inspectionStandard = $doc->inspectionStandard ?? \App\Models\InspectionStandard::where('request_document_id', $doc->id)->first();
-                    $currentStatus = $inspectionStandard?->status ?? $doc->status;
-                @endphp
-
-                @if($currentStatus === 'DRAFT' || $doc->status === 'PENDING' || $doc->status === 'REVISE')
+                {{-- Action Buttons berdasarkan status dari inspection_standards --}}
+                @if(in_array($currentStatus, ['DRAFT', 'PENDING', 'REVISE', 'REJECTED']))
                     {{-- Draft, Pending, or revision required - show form button --}}
                     <div class="d-grid gap-2">
                         @if($currentStatus === 'DRAFT')
                             <span class="badge bg-secondary mb-2 text-center">Draft in Progress</span>
                         @endif
+                        @php
+                            $buttonText = $currentStatus === 'DRAFT' ? 'Lanjutkan Form' : 'Isi Form Terlebih Dahulu';
+                        @endphp
                         <a href="{{ route('inspection-standard.form', $token) }}" class="btn btn-primary btn-lg">
-                            <i class="ti ti-pencil me-2"></i>{{ $currentStatus === 'DRAFT' ? 'Continue Form' : 'Isi Form Terlebih Dahulu' }}
+                            <i class="ti ti-pencil me-2"></i>{{ $buttonText }}
                         </a>
                     </div>
 
-                @elseif(in_array($doc->status, ['SUBMITTED', 'APPROVED']))
+                @elseif(in_array($currentStatus, ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']))
                     {{-- Submitted or Approved - show PDF download/view --}}
                     @if($inspectionStandard && $inspectionStandard->pdf_file_path)
                     <div class="d-grid gap-2">
                         <div class="alert alert-info p-2 mb-2">
                             <small class="d-block mb-2">
                                 <i class="ti ti-calendar me-1"></i>
-                                <strong>{{ $doc->submitted_at?->format('d M Y') }}</strong>
+                                <strong>{{ $inspectionStandard->submitted_at?->format('d M Y') ?? '-' }}</strong>
                             </small>
                             <small class="d-block">
                                 <i class="ti ti-clock me-1"></i>
-                                {{ $doc->submitted_at?->format('H:i') }}
+                                {{ $inspectionStandard->submitted_at?->format('H:i') ?? '-' }}
                             </small>
                         </div>
                         <a href="{{ route('inspection-standard.pdf', $inspectionStandard->id) }}" 
@@ -132,7 +135,7 @@
                            class="btn btn-success">
                             <i class="ti ti-download me-2"></i>Download PDF
                         </a>
-                        @if($doc->status === 'REVISE' || ($doc->status === 'SUBMITTED' && !$inspectionStandard->isApproved()))
+                        @if(in_array($currentStatus, ['REVISE', 'REJECTED', 'SUBMITTED', 'PENDING_REVIEW']))
                         <a href="{{ route('inspection-standard.form', $token) }}" class="btn btn-outline-warning">
                             <i class="ti ti-pencil me-2"></i>Edit Form
                         </a>

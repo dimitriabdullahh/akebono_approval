@@ -14,8 +14,9 @@ class ReviewApprovalService
     /**
      * Approve dokumen dengan sistem multi-level approval
      */
-    public function approveDocument(RequestDocument $requestDocument, int $userId): bool
+    public function approveDocument(RequestDocument $requestDocument, int|string $userId): bool
     {
+        $userId = (int) $userId;
         // Validasi status harus SUBMITTED
         if ($requestDocument->status !== 'SUBMITTED') {
             throw new \Exception('Hanya dokumen dengan status SUBMITTED yang dapat di-approve');
@@ -119,8 +120,9 @@ class ReviewApprovalService
     /**
      * Reject dokumen dan request revisi
      */
-    public function rejectDocument(RequestDocument $requestDocument, string $revisionNote, int $userId): bool
+    public function rejectDocument(RequestDocument $requestDocument, string $revisionNote, int|string $userId): bool
     {
+        $userId = (int) $userId;
         // Validasi status harus SUBMITTED
         if ($requestDocument->status !== 'SUBMITTED') {
             throw new \Exception('Hanya dokumen dengan status SUBMITTED yang dapat di-reject');
@@ -156,10 +158,35 @@ class ReviewApprovalService
     }
 
     /**
-     * Check apakah user memiliki akses untuk review dokumen ini
+     * Check apakah user/employee memiliki akses untuk review dokumen ini
+     * Supports both Employee (new system) and User (legacy)
      */
-    public function userCanReviewDocument(int $userId, RequestDocument $requestDocument): bool
+    public function userCanReviewDocument(int|string $userId, RequestDocument $requestDocument): bool
     {
+        // Check Employee authentication first
+        if (auth()->guard('employee')->check()) {
+            $employee = auth()->guard('employee')->user();
+            
+            // Get document scopes
+            $scopes = $requestDocument->documentType->scope ?? [];
+            
+            // Map employee division ke document scope
+            $employeeScope = match (strtoupper($employee->division)) {
+                'QA' => 'QA',
+                'PURCHASING' => 'PURCHASING',
+                'PCC', 'PPC' => 'PPC',
+                default => null,
+            };
+            
+            if (!$employeeScope) {
+                return false;
+            }
+            
+            return in_array($employeeScope, $scopes);
+        }
+        
+        // Fallback to legacy User
+        $userId = (int) $userId;
         $user = \App\Models\User::find($userId);
         if (!$user) {
             return false;
@@ -186,9 +213,42 @@ class ReviewApprovalService
     /**
      * Get documents yang perlu di-review oleh user (SUBMITTED)
      * Hanya tampilkan dokumen yang belum di-approve oleh scope user ini
+     * Supports both Employee (new system) and User (legacy)
      */
-    public function getPendingDocumentsForReview(int $userId)
+    public function getPendingDocumentsForReview(int|string $userId)
     {
+        // Check Employee authentication first
+        if (auth()->guard('employee')->check()) {
+            $employee = auth()->guard('employee')->user();
+            
+            // Map employee division ke scope
+            $scope = match (strtoupper($employee->division)) {
+                'QA' => 'QA',
+                'PURCHASING' => 'PURCHASING',
+                'PCC', 'PPC' => 'PPC',
+                default => null,
+            };
+
+            if (!$scope) {
+                return collect();
+            }
+
+            return RequestDocument::where('status', 'SUBMITTED')
+                ->whereHas('documentType', function ($q) use ($scope) {
+                    $q->whereJsonContains('scope', $scope);
+                })
+                // Exclude documents yang sudah di-approve oleh scope ini
+                ->whereDoesntHave('approvals', function ($q) use ($scope) {
+                    $q->where('scope', $scope)
+                      ->where('status', 'APPROVED');
+                })
+                ->with(['documentRequest.supplier', 'documentType', 'histories', 'approvals.user', 'approvals.employee'])
+                ->orderByDesc('created_at')
+                ->get();
+        }
+
+        // Fallback to legacy User
+        $userId = (int) $userId;
         $user = \App\Models\User::find($userId);
         if (!$user || !$user->isInternalAdmin()) {
             return collect();
@@ -222,9 +282,37 @@ class ReviewApprovalService
 
     /**
      * Get documents yang perlu revisi (REVISE) yang sesuai scope user
+     * Supports both Employee (new system) and User (legacy)
      */
-    public function getRevisionDocumentsForReview(int $userId)
+    public function getRevisionDocumentsForReview(int|string $userId)
     {
+        // Check Employee authentication first
+        if (auth()->guard('employee')->check()) {
+            $employee = auth()->guard('employee')->user();
+            
+            // Map employee division ke scope
+            $scope = match (strtoupper($employee->division)) {
+                'QA' => 'QA',
+                'PURCHASING' => 'PURCHASING',
+                'PCC', 'PPC' => 'PPC',
+                default => null,
+            };
+
+            if (!$scope) {
+                return collect();
+            }
+
+            return RequestDocument::where('status', 'REVISE')
+                ->whereHas('documentType', function ($q) use ($scope) {
+                    $q->whereJsonContains('scope', $scope);
+                })
+                ->with(['documentRequest.supplier', 'documentType', 'histories'])
+                ->orderByDesc('updated_at')
+                ->get();
+        }
+
+        // Fallback to legacy User
+        $userId = (int) $userId;
         $user = \App\Models\User::find($userId);
         if (!$user || !$user->isInternalAdmin()) {
             return collect();
@@ -254,8 +342,9 @@ class ReviewApprovalService
     /**
      * Get documents yang perlu di-review oleh user (deprecated - gunakan getPendingDocumentsForReview)
      */
-    public function getDocumentsForReview(int $userId)
+    public function getDocumentsForReview(int|string $userId)
     {
+        $userId = (int) $userId;
         return $this->getPendingDocumentsForReview($userId);
     }
 
@@ -298,9 +387,53 @@ class ReviewApprovalService
     /**
      * Get dokumen APPROVED untuk user (sesuai scope)
      * Tampilkan dokumen yang sudah final APPROVED ATAU yang sudah di-approve oleh scope user ini
+     * Supports both Employee (new system) and User (legacy)
      */
-    public function getApprovedDocumentsForReview(int $userId)
+    public function getApprovedDocumentsForReview(int|string $userId)
     {
+        // Check Employee authentication first
+        if (auth()->guard('employee')->check()) {
+            $employee = auth()->guard('employee')->user();
+            
+            // Map employee division ke scope
+            $scope = match (strtoupper($employee->division)) {
+                'QA' => 'QA',
+                'PURCHASING' => 'PURCHASING',
+                'PCC', 'PPC' => 'PPC',
+                default => null,
+            };
+
+            if (!$scope) {
+                return collect();
+            }
+
+            // Get dokumen yang sudah final APPROVED
+            $finalApproved = RequestDocument::where('status', 'APPROVED')
+                ->whereHas('documentType', function ($q) use ($scope) {
+                    $q->whereJsonContains('scope', $scope);
+                })
+                ->with(['documentRequest.supplier', 'documentType', 'reviewedBy', 'approvals.user', 'approvals.employee'])
+                ->orderByDesc('reviewed_at')
+                ->get();
+
+            // Get dokumen SUBMITTED yang sudah di-approve oleh scope ini (tapi belum final approved)
+            $partialApproved = RequestDocument::where('status', 'SUBMITTED')
+                ->whereHas('documentType', function ($q) use ($scope) {
+                    $q->whereJsonContains('scope', $scope);
+                })
+                ->whereHas('approvals', function ($q) use ($scope) {
+                    $q->where('scope', $scope)
+                      ->where('status', 'APPROVED');
+                })
+                ->with(['documentRequest.supplier', 'documentType', 'reviewedBy', 'approvals.user', 'approvals.employee'])
+                ->orderByDesc('reviewed_at')
+                ->get();
+
+            return $finalApproved->merge($partialApproved)->sortByDesc('reviewed_at')->values();
+        }
+
+        // Fallback to legacy User
+        $userId = (int) $userId;
         $user = \App\Models\User::find($userId);
         if (!$user || !$user->isInternalAdmin()) {
             return collect();

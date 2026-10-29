@@ -4,648 +4,427 @@
     <meta charset="UTF-8">
     <title>Packaging Standard - {{ $formData['generalInformation']['partNo'] ?? $ps->part_no ?? 'N/A' }}</title>
     <style>
-        @page {
-            size: 792pt 612pt;
-            margin: 0;
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        html, body {
-            margin: 0;
-            padding: 0;
-            background: #fff;
-            font-family: 'Bookman Old Style', 'Times New Roman', Times, serif;
-            font-size: 8.6pt;
-            color: #000;
-            line-height: 1.0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            border-spacing: 0;
-            table-layout: fixed;
-        }
-        td, th {
-            border: 0.96pt solid #000;
-            padding: 0 4pt;
-            vertical-align: middle;
-            font-size: 8.6pt;
-            color: #000;
-            font-family: 'Bookman Old Style', 'Times New Roman', Times, serif;
-        }
-        .outer-wrapper {
-            border: 1.92pt solid #000;
-            width: 782pt;
-            margin: 38pt 3pt 0 3pt;
-            padding: 0;
-        }
-        
-        .b-none { border: none !important; }
-        .b-t-none { border-top: none !important; }
-        .b-b-none { border-bottom: none !important; }
-        .b-l-none { border-left: none !important; }
-        .b-r-none { border-right: none !important; }
-
-        .bold { font-weight: bold; }
-        .center { text-align: center; }
-        .left { text-align: left; }
-        .right { text-align: right; }
-
-        .header-title {
-            font-family: 'Bookman Old Style', 'Times New Roman', Times, serif;
-            font-size: 19.6pt;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-            text-align: center;
-        }
-        .section-header {
-            text-align: center;
-            font-size: 8.6pt;
-            padding: 0;
-            background-color: #fff;
-            height: 22.8pt;
-        }
-        .info-label {
-            font-size: 8.6pt;
-        }
-        .colon {
-            font-size: 9.6pt;
-            padding-right: 2pt;
-        }
+        @page { size: 792pt 612pt; margin: 0; }
+        html, body { margin: 0; padding: 0; background: #fff; }
+        body { font-family: 'Bookman Old Style', 'TeX Gyre Bonum', 'Times New Roman', Times, serif; font-size: 8.6pt; color: #000; }
+        .frame { position: absolute; left: 3.9pt; top: 39.3pt; width: 784pt; height: 532pt; }
+        .outer { position: absolute; left: -0.96pt; top: -0.96pt; width: 782.08pt; height: 530.08pt; border: 1.92pt solid #000; }
+        .hl { position: absolute; height: 0; border-top: 0.96pt solid #000; }
+        .vl { position: absolute; width: 0; border-left: 0.96pt solid #000; }
+        .t  { position: absolute; white-space: nowrap; overflow: visible; text-overflow: clip; }
+        .c  { text-align: center; }
+        .title { font-size: 19.6pt; font-weight: bold; letter-spacing: 0.2px; }
     </style>
 </head>
 <body>
 @php
-    $getImageBase64 = function($imagePath) {
-        if (!$imagePath) return null;
-        $fullPath = null;
-        if (file_exists(storage_path('app/private/' . $imagePath))) {
-            $fullPath = storage_path('app/private/' . $imagePath);
-        } elseif (file_exists(storage_path('app/' . $imagePath))) {
-            $fullPath = storage_path('app/' . $imagePath);
-        } elseif (file_exists(public_path('storage/' . $imagePath))) {
-            $fullPath = public_path('storage/' . $imagePath);
-        } elseif (file_exists($imagePath)) {
-            $fullPath = $imagePath;
+    /* =====================================================================
+       HELPERS
+       ===================================================================== */
+
+    /* ambil file dari storage -> data URI base64 */
+    $toDataUri = function ($path) {
+        if (!$path) return null;
+        foreach ([storage_path('app/private/' . $path), storage_path('app/' . $path),
+                  storage_path('app/public/' . $path), public_path('storage/' . $path), $path] as $p) {
+            if (is_file($p)) {
+                $ext  = strtolower(pathinfo($p, PATHINFO_EXTENSION));
+                $mime = match ($ext) { 'jpg', 'jpeg' => 'image/jpeg', 'gif' => 'image/gif', 'webp' => 'image/webp', default => 'image/png' };
+                $data = @file_get_contents($p);
+                return $data === false ? null : 'data:' . $mime . ';base64,' . base64_encode($data);
+            }
         }
-        if ($fullPath && file_exists($fullPath)) {
-            $type = pathinfo($fullPath, PATHINFO_EXTENSION);
-            $data = file_get_contents($fullPath);
-            return 'data:image/' . $type . ';base64,' . base64_encode($data);
-        }
+        \Log::warning('Packaging Standard PDF: image not found: ' . $path);
         return null;
     };
 
-    // Generate callout bubble exact matching reference shape
-    $getCalloutBubble = function($line1, $line2 = null) {
-        $scale = 2;
-        $w = (int)(110 * $scale);
-        $h = (int)(105 * $scale);
-        $im = imagecreatetruecolor($w, $h);
-        imagesavealpha($im, true);
-        $transparent = imagecolorallocatealpha($im, 0, 0, 0, 127);
-        imagefill($im, 0, 0, $transparent);
-
-        // Word/Excel shape blue
-        $blueFill = imagecolorallocate($im, 79, 129, 189);
-        $blueBorder = imagecolorallocate($im, 56, 93, 138);
-        $white = imagecolorallocate($im, 255, 255, 255);
-
-        $bx0 = (int)(12 * $scale);
-        $by0 = (int)(2 * $scale);
-        $bx1 = (int)(106 * $scale);
-        $by1 = (int)(68 * $scale);
-        $rad = (int)(11 * $scale);
-
-        // Fill body rounded rect
-        imagefilledrectangle($im, $bx0 + $rad, $by0, $bx1 - $rad, $by1, $blueFill);
-        imagefilledrectangle($im, $bx0, $by0 + $rad, $bx1, $by1 - $rad, $blueFill);
-        imagefilledellipse($im, $bx0 + $rad, $by0 + $rad, $rad * 2, $rad * 2, $blueFill);
-        imagefilledellipse($im, $bx1 - $rad, $by0 + $rad, $rad * 2, $rad * 2, $blueFill);
-        imagefilledellipse($im, $bx0 + $rad, $by1 - $rad, $rad * 2, $rad * 2, $blueFill);
-        imagefilledellipse($im, $bx1 - $rad, $by1 - $rad, $rad * 2, $rad * 2, $blueFill);
-
-        // Fill tail
-        $tailPoints = [
-            (int)(53 * $scale), (int)(67 * $scale),
-            (int)(28 * $scale), (int)(67 * $scale),
-            0, (int)(104 * $scale)
-        ];
-        imagefilledpolygon($im, $tailPoints, $blueFill);
-
-        // Outline tail
-        imagesetthickness($im, (int)(2 * $scale));
-        imageline($im, (int)(53 * $scale), (int)(67 * $scale), 0, (int)(104 * $scale), $blueBorder);
-        imageline($im, 0, (int)(104 * $scale), (int)(28 * $scale), (int)(67 * $scale), $blueBorder);
-
-        // Outline body
-        imageline($im, $bx0 + $rad, $by0, $bx1 - $rad, $by0, $blueBorder);
-        imageline($im, $bx1, $by0 + $rad, $bx1, $by1 - $rad, $blueBorder);
-        imageline($im, $bx0 + $rad, $by1, (int)(28 * $scale), $by1, $blueBorder);
-        imageline($im, (int)(53 * $scale), $by1, $bx1 - $rad, $by1, $blueBorder);
-        imageline($im, $bx0, $by0 + $rad, $bx0, $by1 - $rad, $blueBorder);
-        imagearc($im, $bx0 + $rad, $by0 + $rad, $rad * 2, $rad * 2, 180, 270, $blueBorder);
-        imagearc($im, $bx1 - $rad, $by0 + $rad, $rad * 2, $rad * 2, 270, 360, $blueBorder);
-        imagearc($im, $bx1 - $rad, $by1 - $rad, $rad * 2, $rad * 2, 0, 90, $blueBorder);
-        imagearc($im, $bx0 + $rad, $by1 - $rad, $rad * 2, $rad * 2, 90, 180, $blueBorder);
-
-        // Text rendering
-        $font = 4;
-        if ($line2) {
-            $tw1 = imagefontwidth($font) * strlen($line1);
-            $tw2 = imagefontwidth($font) * strlen($line2);
-            $cx = ($bx0 + $bx1) / 2;
-            imagestring($im, $font, (int)($cx - $tw1 / 2), (int)(18 * $scale), $line1, $white);
-            imagestring($im, $font, (int)($cx - $tw2 / 2), (int)(38 * $scale), $line2, $white);
-        } else {
-            $tw = imagefontwidth($font) * strlen($line1);
-            $cx = ($bx0 + $bx1) / 2;
-            imagestring($im, $font, (int)($cx - $tw / 2), (int)(28 * $scale), $line1, $white);
-        }
-
-        ob_start();
-        imagepng($im);
-        $data = ob_get_clean();
-        imagedestroy($im);
-
-        return 'data:image/png;base64,' . base64_encode($data);
+    /* skala gambar agar muat di kotak (pt), rasio tetap */
+    $fit = function ($uri, $boxW, $boxH) {
+        $raw  = base64_decode(substr($uri, strpos($uri, ',') + 1));
+        $info = @getimagesizefromstring($raw);
+        if (!$info || !$info[0] || !$info[1]) return [$boxW, $boxH];
+        $r = min($boxW / $info[0], $boxH / $info[1]);
+        return [$info[0] * $r, $info[1] * $r];
     };
 
-    $photoImg = $getImageBase64($ps->image_photographic ?? $ps->image_visualisasi_packing);
-    $labelImg = $getImageBase64($ps->image_part_identification ?? $ps->image_label_packing);
+    /* ambil nilai pertama yang tidak kosong dari beberapa kemungkinan key */
+    $pick = function ($row, array $keys) {
+        foreach ($keys as $k) {
+            if (isset($row[$k]) && $row[$k] !== '') return $row[$k];
+        }
+        return '';
+    };
+    $fmtNum = fn ($v) => is_numeric($v) ? number_format($v, 2) : $v;
 
-    $defaultPhotoBubble = $getCalloutBubble("Visualisasi", "packing");
-    $defaultLabelBubble = $getCalloutBubble("Label packing");
+    /* AUTO-FIT TEKS ke kotak (w x h pt).
+       Urutan: 1 baris ukuran normal -> perkecil font -> pecah 2..$maxLines baris (rata tengah vertikal)
+       $k = estimasi lebar rata-rata huruf (em): ~0.55 huruf campur, ~0.72 huruf KAPITAL tebal.
+       Mengembalikan string CSS (font-size, line-height, wrap, padding). */
+    $fitText = function ($text, $w, $h = 24.3, $base = 8.6, $min = 5.5, $k = 0.55, $maxLines = 3) {
+        $len = max(1, mb_strlen((string) $text));
+        for ($lines = 1; $lines <= $maxLines; $lines++) {
+            $fs = min($base, ($w * $lines * 0.92) / ($len * $k));
+            $lh = round($fs * 1.15, 2);
+            if ($fs >= $min && $lines * $lh <= $h) {
+                if ($lines === 1) {
+                    return 'font-size:' . round($fs, 2) . "pt;line-height:{$h}pt;white-space:nowrap;";
+                }
+                $pad = round(($h - $lines * $lh) / 2, 2);
+                return 'font-size:' . round($fs, 2) . "pt;line-height:{$lh}pt;white-space:normal;"
+                     . "word-wrap:break-word;overflow:hidden;padding-top:{$pad}pt;"
+                     . 'height:' . round($h - $pad, 2) . 'pt;';
+            }
+        }
+        return "font-size:{$min}pt;line-height:{$h}pt;white-space:nowrap;overflow:hidden;";
+    };
 
-    $docNo = $formData['generalInformation']['documentNo'] ?? $ps->document_no ?? '';
-    $revision = $formData['generalInformation']['revision'] ?? $ps->revision ?? '';
-    $dateVal = $ps->date ? $ps->date->format('Y-m-d') : ($formData['generalInformation']['date'] ?? '');
-    $customerVal = $formData['generalInformation']['customer'] ?? $ps->customer ?? '';
-    $partNoVal = $formData['generalInformation']['partNo'] ?? $ps->part_no ?? '';
-    $partNameVal = $formData['generalInformation']['partName'] ?? $ps->part_name ?? '';
-    $pkgTypeVal = $formData['specifications']['packagingType'] ?? $ps->packaging_type ?? '';
-    $pkgSizeVal = $formData['specifications']['packagingSizeMm'] ?? $ps->packaging_size_mm ?? '';
-    $pkgLotVal = $formData['specifications']['packagingLotPcsBox'] ?? $ps->packaging_lot_pcs_box ?? '';
-    $netWeightVal = $formData['specifications']['netWeightGPc'] ?? $ps->net_weight_g_pc ?? '';
-    $totWeightVal = $formData['specifications']['totalWeightKgBox'] ?? $ps->total_weight_kg_box ?? '';
+    /* susun grid foto (auto 1 / 2 / 4 / 3 kolom) -> array item [uri, left, top, w, h] */
+    $buildGrid = function ($images, $areaW, $areaH, $originX, $originY) use ($toDataUri, $fit) {
+        $uris = [];
+        foreach ($images as $img) {
+            $u = $toDataUri($img->file_path);
+            if ($u) $uris[] = $u;
+        }
+        $n = count($uris);
+        if ($n === 0) return [];
+
+        $spacing = 5;
+        if     ($n == 1)  { $cols = 1; $rows = 1; }
+        elseif ($n == 2)  { $cols = 2; $rows = 1; }
+        elseif ($n <= 4)  { $cols = 2; $rows = 2; }
+        else              { $cols = 3; $rows = (int) ceil($n / 3); }
+
+        $cellW = ($areaW - $spacing * ($cols - 1)) / $cols;
+        $cellH = ($areaH - $spacing * ($rows - 1)) / $rows;
+
+        $items = [];
+        foreach ($uris as $i => $u) {
+            $col = $i % $cols;
+            $row = (int) floor($i / $cols);
+            [$w, $h] = $fit($u, $cellW, $cellH);
+            $items[] = [
+                'uri'  => $u,
+                'left' => round($originX + $col * ($cellW + $spacing) + ($cellW - $w) / 2, 2),
+                'top'  => round($originY + $row * ($cellH + $spacing) + ($cellH - $h) / 2, 2),
+                'w'    => round($w, 2),
+                'h'    => round($h, 2),
+            ];
+        }
+        return $items;
+    };
+
+    /* =====================================================================
+       DATA
+       ===================================================================== */
+
+    /* placeholder balon (tampil hanya jika foto belum di-upload) -> public/images/ */
+    $bubblePhoto = is_file(public_path('images/ps-bubble-photo.png')) ? $toDataUri(public_path('images/ps-bubble-photo.png')) : null;
+    $bubbleLabel = is_file(public_path('images/ps-bubble-label.png')) ? $toDataUri(public_path('images/ps-bubble-label.png')) : null;
+
+    /* logo perusahaan */
+    $companyLogo = null;
+    if (!empty($ps->company_logo)) {
+        $companyLogo = str_starts_with($ps->company_logo, 'data:image') ? $ps->company_logo : $toDataUri($ps->company_logo);
+    }
+
+    /* data form */
+    $docNo        = $formData['generalInformation']['documentNo'] ?? $ps->document_no ?? '';
+    $revision     = $formData['generalInformation']['revision'] ?? $ps->revision ?? '';
+    $dateVal      = $ps->date ? $ps->date->format('Y-m-d') : ($formData['generalInformation']['date'] ?? '');
+    $customerVal  = strtoupper($formData['generalInformation']['customer'] ?? $ps->customer ?? 'PT. AKEBONO BRAKE ASTRA INDONESIA');
+    $partNoVal    = $formData['generalInformation']['partNo'] ?? $ps->part_no ?? '';
+    $partNameVal  = $formData['generalInformation']['partName'] ?? $ps->part_name ?? '';
+    $pkgTypeVal   = $formData['specifications']['packagingType'] ?? $ps->packaging_type ?? '';
+    $pkgSizeVal   = $formData['specifications']['packagingSizeMm'] ?? $ps->packaging_size_mm ?? '';
+    $pkgLotVal    = $formData['specifications']['packagingLotPcsBox'] ?? $ps->packaging_lot_pcs_box ?? '';
+    $netWeightVal = $fmtNum($formData['specifications']['netWeightGPc'] ?? $ps->net_weight_g_pc ?? '');
+    $totWeightVal = $fmtNum($formData['specifications']['totalWeightKgBox'] ?? $ps->total_weight_kg_box ?? '');
+
+    /* nama approval (prioritas: field QR/name di model, fallback ke formData) */
+    $approvedName = $ps->approved_by_name ?: ($formData['visualizationApproval']['approvedByName'] ?? '');
+    $checkedName  = $ps->checked_by_name  ?: ($formData['visualizationApproval']['checkedByName'] ?? '');
+    $preparedName = $ps->prepared_by_name ?: ($formData['visualizationApproval']['preparedByName'] ?? '');
+
+    /* QR code approval */
+    $approvedQr = $ps->approved_qr_data ?? null;
+    $checkedQr  = $ps->checked_qr_data ?? null;
+    $preparedQr = $ps->prepared_qr_data ?? null;
+
+    $qaName = ($ps->isApproved() && $ps->approved_by_name) ? $ps->approved_by_name : '';
+    $qaDate = ($ps->isApproved() && $ps->approved_at) ? $ps->approved_at->format('d/m/y') : '';
 
     $materials = $formData['specifications']['materials'] ?? $formData['materials'] ?? ($ps->form_data_json['materials'] ?? []);
     if (!is_array($materials)) $materials = [];
 
     $revisions = $formData['visualizationApproval']['revisionHistory'] ?? $ps->revision_history ?? ($ps->form_data_json['revisionHistory'] ?? []);
-    if (!is_array($revisions)) {
-        $revisions = json_decode($revisions, true) ?? [];
+    if (!is_array($revisions)) $revisions = json_decode($revisions, true) ?? [];
+
+    /* supplier (header kiri atas) */
+    $hasSupplier  = !empty($ps->supplier);
+    $supplierName = strtoupper($hasSupplier ? ($ps->supplier->name ?? 'YOUR COMPANY') : 'YOUR COMPANY LOGO');
+    if ($companyLogo) {
+        [$lw, $lh]    = $fit($companyLogo, 60, 24);
+        $logoLeftPos  = 5;
+        $textLeftPos  = $logoLeftPos + $lw + 5;
+        $supTextWidth = 202.42 - $textLeftPos - 4;   // berhenti sebelum garis vertikal
+    } else {
+        $textLeftPos  = 2;
+        $supTextWidth = 198;
     }
+
+    /* kotak tanda tangan atas: Approved / Checked / Prepared */
+    $signBoxes = [
+        ['label' => 'Approved', 'left' => 610.0, 'w' => 58.3, 'qr' => $approvedQr, 'name' => $approvedName],
+        ['label' => 'Checked',  'left' => 668.3, 'w' => 58.2, 'qr' => $checkedQr,  'name' => $checkedName],
+        ['label' => 'Prepared', 'left' => 726.5, 'w' => 57.5, 'qr' => $preparedQr, 'name' => $preparedName],
+    ];
+    $qrSize  = 32;     // pt
+    $qrTop   = 13.5;   // tepat di bawah garis label (11.92)
+    $nameTop = 46.5;   // tepat di bawah QR
+    $nameH   = 12;     // sampai 58.5 (garis bawah kotak di 59.02)
+
+    /* foto */
+    $photoItems = $buildGrid($ps->imagesByType('image_of_packaging'), 413.4, 214.3, 366.6, 83.7);
+    $labelItems = $buildGrid($ps->imagesByType('part_identification_point'), 413.4, 141.8, 366.6, 314);
 @endphp
 
-<div class="outer-wrapper">
-    <!-- TOP HEADER (UNIFIED SINGLE TABLE) -->
-    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-        <colgroup>
-            <col style="width: 25.68%;">
-            <col style="width: 51.72%;">
-            <col style="width: 7.533%;">
-            <col style="width: 7.533%;">
-            <col style="width: 7.534%;">
-        </colgroup>
-        <!-- ROW 1: Logo / Title / Approval Headers -->
-        <tr>
-            <!-- Col 1: Logo -->
-            <td class="center" style="width: 25.68%; height: 24pt; font-family: Arial, sans-serif; font-size: 9.8pt; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000; vertical-align: middle;">
-                YOUR COMPANY LOGO
-            </td>
-            <!-- Col 2: Title (rowspan 5) -->
-            <td rowspan="5" class="center" style="width: 51.72%; font-family: Arial, sans-serif; font-size: 14pt; font-weight: bold; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000; vertical-align: middle;">
-                <div class="header-title" style="margin: 0; padding: 0;">PACKAGING STANDARD</div>
-            </td>
-            <!-- Cols 3-5: Approval Headers -->
-            <td class="center" style="width: 7.533%; height: 12pt; padding: 0; font-size: 8.6pt; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000;">Approved</td>
-            <td class="center" style="width: 7.533%; height: 12pt; padding: 0; font-size: 8.6pt; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000;">Checked</td>
-            <td class="center" style="width: 7.534%; height: 12pt; padding: 0; font-size: 8.6pt; border: none; border-bottom: 0.96pt solid #000;">Prepared</td>
-        </tr>
+<div class="frame">
+    <div class="outer"></div>
 
-        <!-- ROW 2: Doc No / Signatures (rowspan 3) -->
-        <tr>
-            <!-- Col 1: Doc No -->
-            <td style="height: 11.5pt; padding: 0 4pt; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000; vertical-align: middle;">
-                <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                    <colgroup>
-                        <col style="width: 58%;">
-                        <col style="width: 42%;">
-                    </colgroup>
-                    <tr>
-                        <td class="b-none info-label" style="padding: 0;">Document No.</td>
-                        <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ $docNo }}</td>
-                    </tr>
-                </table>
-            </td>
-            <!-- Cols 3-5: Signatures (rowspan 3) -->
-            <td rowspan="3" style="vertical-align: bottom; text-align: center; font-size: 8pt; padding: 0 2pt 2pt 2pt; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000;">
-                {{ $formData['visualizationApproval']['approvedByName'] ?? $ps->approved_by_name ?? '' }}
-            </td>
-            <td rowspan="3" style="vertical-align: bottom; text-align: center; font-size: 8pt; padding: 0 2pt 2pt 2pt; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000;">
-                {{ $formData['visualizationApproval']['checkedByName'] ?? $ps->checked_by_name ?? '' }}
-            </td>
-            <td rowspan="3" style="vertical-align: bottom; text-align: center; font-size: 8pt; padding: 0 2pt 2pt 2pt; border: none; border-bottom: 0.96pt solid #000;">
-                {{ $formData['visualizationApproval']['preparedByName'] ?? $ps->prepared_by_name ?? '' }}
-            </td>
-        </tr>
+    {{-- ================= GARIS HORIZONTAL ================= --}}
+    <div class="hl" style="left:0pt;top:23.72pt;width:202.9pt"></div>
+    <div class="hl" style="left:0pt;top:35.32pt;width:202.9pt"></div>
+    <div class="hl" style="left:0pt;top:47.02pt;width:202.9pt"></div>
+    <div class="hl" style="left:0pt;top:58.62pt;width:202.9pt"></div>
+    <div class="hl" style="left:610pt;top:11.92pt;width:174pt"></div>
+    <div class="hl" style="left:610pt;top:59.02pt;width:174pt"></div>
+    <div class="hl" style="left:0pt;top:70.22pt;width:784pt"></div>
+    <div class="hl" style="left:0pt;top:94.52pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:118.82pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:143.12pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:167.42pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:191.72pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:216.02pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:227.92pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:252.22pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:276.52pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:300.82pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:325.12pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:349.42pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:373.72pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:398.02pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:409.92pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:434.22pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:458.52pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:482.82pt;width:362.6pt"></div>
+    <div class="hl" style="left:0pt;top:507.12pt;width:362.6pt"></div>
+    <div class="hl" style="left:362.6pt;top:300.52pt;width:421.4pt"></div>
+    <div class="hl" style="left:362.6pt;top:458.32pt;width:421.4pt"></div>
+    <div class="hl" style="left:610pt;top:470.72pt;width:174pt"></div>
+    <div class="hl" style="left:610pt;top:518.52pt;width:174pt"></div>
 
-        <!-- ROW 3: Revision -->
-        <tr>
-            <td style="height: 11.5pt; padding: 0 4pt; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000; vertical-align: middle;">
-                <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                    <colgroup>
-                        <col style="width: 58%;">
-                        <col style="width: 42%;">
-                    </colgroup>
-                    <tr>
-                        <td class="b-none info-label" style="padding: 0;">Revision</td>
-                        <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ $revision }}</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+    {{-- ================= GARIS VERTIKAL ================= --}}
+    <div class="vl" style="left:202.42pt;top:0pt;height:70.7pt"></div>
+    <div class="vl" style="left:609.52pt;top:0pt;height:70.7pt"></div>
+    <div class="vl" style="left:667.82pt;top:0pt;height:70.7pt"></div>
+    <div class="vl" style="left:726.02pt;top:0pt;height:70.7pt"></div>
+    <div class="vl" style="left:362.12pt;top:70.7pt;height:461.3pt"></div>
+    <div class="vl" style="left:202.42pt;top:119.3pt;height:72.9pt"></div>
+    <div class="vl" style="left:28.32pt;top:216.5pt;height:157.7pt"></div>
+    <div class="vl" style="left:129.72pt;top:216.5pt;height:157.7pt"></div>
+    <div class="vl" style="left:246.22pt;top:216.5pt;height:157.7pt"></div>
+    <div class="vl" style="left:318.92pt;top:216.5pt;height:157.7pt"></div>
+    <div class="vl" style="left:28.32pt;top:398.5pt;height:133.5pt"></div>
+    <div class="vl" style="left:188.02pt;top:398.5pt;height:133.5pt"></div>
+    <div class="vl" style="left:231.82pt;top:398.5pt;height:133.5pt"></div>
+    <div class="vl" style="left:304.52pt;top:398.5pt;height:133.5pt"></div>
+    <div class="vl" style="left:609.52pt;top:458.8pt;height:73.2pt"></div>
+    <div class="vl" style="left:667.82pt;top:458.8pt;height:73.2pt"></div>
+    <div class="vl" style="left:726.02pt;top:458.8pt;height:73.2pt"></div>
 
-        <!-- ROW 4: Date -->
-        <tr>
-            <td style="height: 11.5pt; padding: 0 4pt; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000; vertical-align: middle;">
-                <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                    <colgroup>
-                        <col style="width: 58%;">
-                        <col style="width: 42%;">
-                    </colgroup>
-                    <tr>
-                        <td class="b-none info-label" style="padding: 0;">Date</td>
-                        <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ $dateVal }}</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+    {{-- ================= HEADER KIRI: LOGO + SUPPLIER ================= --}}
+    @if($companyLogo)
+        <img src="{{ $companyLogo }}" style="position:absolute;left:{{ $logoLeftPos }}pt;top:0pt;width:{{ round($lw, 2) }}pt;height:{{ round($lh, 2) }}pt;" alt="Company Logo">
+    @endif
+    <div class="t {{ $companyLogo ? '' : 'c' }}" style="left:{{ round($textLeftPos, 2) }}pt;top:0pt;width:{{ round($supTextWidth, 2) }}pt;height:24.2pt;font-family:Arial,Helvetica,sans-serif;font-weight:bold;{{ $fitText($supplierName, $supTextWidth, 24.2, 10, 6, 0.72, 2) }}">{{ $supplierName }}</div>
 
-        <!-- ROW 5: Customer / Approval Dates -->
-        <tr>
-            <!-- Col 1: Customer -->
-            <td style="height: 11.5pt; padding: 0 4pt; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000; vertical-align: middle;">
-                <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                    <colgroup>
-                        <col style="width: 58%;">
-                        <col style="width: 42%;">
-                    </colgroup>
-                    <tr>
-                        <td class="b-none info-label" style="padding: 0;">Customer</td>
-                        <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ $customerVal }}</td>
-                    </tr>
-                </table>
-            </td>
-            <!-- Cols 3-5: Approval Dates -->
-            <td style="height: 12pt; text-align: center; font-size: 7pt; padding: 0; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000; vertical-align: middle;">
-                {{ $ps->approved_by_date?->format('d/m/y') ?? $formData['visualizationApproval']['approvedByDate'] ?? '' }}
-            </td>
-            <td style="height: 12pt; text-align: center; font-size: 7pt; padding: 0; border: none; border-right: 0.96pt solid #000; border-bottom: 0.96pt solid #000; vertical-align: middle;">
-                {{ $ps->checked_by_date?->format('d/m/y') ?? $formData['visualizationApproval']['checkedByDate'] ?? '' }}
-            </td>
-            <td style="height: 12pt; text-align: center; font-size: 7pt; padding: 0; border: none; border-bottom: 0.96pt solid #000; vertical-align: middle;">
-                {{ $ps->prepared_by_date?->format('d/m/y') ?? $formData['visualizationApproval']['preparedByDate'] ?? '' }}
-            </td>
-        </tr>
-    </table>
+    <div class="t " style="left:2pt;top:24.2pt;width:85pt;height:11.6pt;line-height:11.6pt;">Document No.</div>
+    <div class="t " style="left:89pt;top:24.2pt;width:4pt;height:11.6pt;line-height:11.6pt;">:</div>
+    <div class="t " style="left:93.5pt;top:24.2pt;width:107pt;height:11.6pt;{{ $fitText($docNo, 107, 11.6, 8.6, 5, 0.55, 1) }}">{{ $docNo }}</div>
 
-    <!-- MAIN BODY (2 COLUMNS) -->
-    <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-        <colgroup>
-            <col style="width: 46.0%;">
-            <col style="width: 54.0%;">
-        </colgroup>
-        <tr>
-            <!-- LEFT COLUMN (46.0%) - SINGLE CONTINUOUS TABLE -->
-            <td style="width: 46.0%; padding: 0; vertical-align: top; border: none; border-right: 0.96pt solid #000;">
-                <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-                    <!-- SPECS ROWS 1 to 5 -->
-                    <tr>
-                        <td style="height: 22.8pt; padding: 0 4pt; border: none; border-bottom: 0.96pt solid #000;">
-                            <table style="width: 100%; table-layout: fixed;">
-                                <colgroup>
-                                    <col style="width: 32%;">
-                                    <col style="width: 68%;">
-                                </colgroup>
-                                <tr>
-                                    <td class="b-none info-label" style="padding: 0;">Part No.</td>
-                                    <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ $partNoVal }}</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="height: 22.8pt; padding: 0 4pt; border: none; border-bottom: 0.96pt solid #000;">
-                            <table style="width: 100%; table-layout: fixed;">
-                                <colgroup>
-                                    <col style="width: 32%;">
-                                    <col style="width: 68%;">
-                                </colgroup>
-                                <tr>
-                                    <td class="b-none info-label" style="padding: 0;">Parts Name</td>
-                                    <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ $partNameVal }}</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="height: 22.8pt; padding: 0; border: none; border-bottom: 0.96pt solid #000;">
-                            <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                                <colgroup>
-                                    <col style="width: 55.82%;">
-                                    <col style="width: 44.18%;">
-                                </colgroup>
-                                <tr>
-                                    <td style="padding: 0 4pt; border: none; border-right: 0.96pt solid #000; height: 22.8pt;">
-                                        <table style="width: 100%; table-layout: fixed;">
-                                            <colgroup>
-                                                <col style="width: 58%;">
-                                                <col style="width: 42%;">
-                                            </colgroup>
-                                            <tr>
-                                                <td class="b-none info-label" style="padding: 0;">Packaging Type</td>
-                                                <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ $pkgTypeVal }}</td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                    <td style="padding: 0 4pt; border: none; height: 22.8pt;">
-                                        <table style="width: 100%; table-layout: fixed;">
-                                            <colgroup>
-                                                <col style="width: 65%;">
-                                                <col style="width: 35%;">
-                                            </colgroup>
-                                            <tr>
-                                                <td class="b-none info-label" style="padding: 0;">Net Weight (g/pc)</td>
-                                                <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ is_numeric($netWeightVal) ? number_format($netWeightVal, 2) : $netWeightVal }}</td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="height: 22.8pt; padding: 0; border: none; border-bottom: 0.96pt solid #000;">
-                            <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                                <colgroup>
-                                    <col style="width: 55.82%;">
-                                    <col style="width: 44.18%;">
-                                </colgroup>
-                                <tr>
-                                    <td style="padding: 0 4pt; border: none; border-right: 0.96pt solid #000; height: 22.8pt;">
-                                        <table style="width: 100%; table-layout: fixed;">
-                                            <colgroup>
-                                                <col style="width: 58%;">
-                                                <col style="width: 42%;">
-                                            </colgroup>
-                                            <tr>
-                                                <td class="b-none info-label" style="padding: 0;">Packaging Size (mm)</td>
-                                                <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ $pkgSizeVal }}</td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                    <td style="padding: 0 4pt; border: none; height: 22.8pt;">
-                                        <table style="width: 100%; table-layout: fixed;">
-                                            <colgroup>
-                                                <col style="width: 65%;">
-                                                <col style="width: 35%;">
-                                            </colgroup>
-                                            <tr>
-                                                <td class="b-none info-label" style="padding: 0;">Total Weight (kg/box)</td>
-                                                <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ is_numeric($totWeightVal) ? number_format($totWeightVal, 2) : $totWeightVal }}</td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="height: 22.8pt; padding: 0; border: none; border-bottom: 0.96pt solid #000;">
-                            <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                                <colgroup>
-                                    <col style="width: 55.82%;">
-                                    <col style="width: 44.18%;">
-                                </colgroup>
-                                <tr>
-                                    <td style="padding: 0 4pt; border: none; border-right: 0.96pt solid #000; height: 22.8pt;">
-                                        <table style="width: 100%; table-layout: fixed;">
-                                            <colgroup>
-                                                <col style="width: 58%;">
-                                                <col style="width: 42%;">
-                                            </colgroup>
-                                            <tr>
-                                                <td class="b-none info-label" style="padding: 0;">Packaging Lot (pcs/box)</td>
-                                                <td class="b-none" style="padding: 0;"><span class="colon">:</span>{{ $pkgLotVal }}</td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                    <td style="padding: 0 4pt; border: none; height: 22.8pt;">
-                                        &nbsp;
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
+    <div class="t " style="left:2pt;top:35.8pt;width:85pt;height:11.7pt;line-height:11.7pt;">Revision</div>
+    <div class="t " style="left:89pt;top:35.8pt;width:4pt;height:11.7pt;line-height:11.7pt;">:</div>
+    <div class="t " style="left:93.5pt;top:35.8pt;width:107pt;height:11.7pt;{{ $fitText($revision, 107, 11.7, 8.6, 5, 0.55, 1) }}">{{ $revision }}</div>
 
-                    <!-- SECTION 1: PART / PACKAGING MATERIALS -->
-                    <tr>
-                        <td class="section-header" style="height: 22.8pt; border: none; border-bottom: 0.96pt solid #000;">
-                            PART / PACKAGING MATERIALS
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 0; border: none; border-bottom: 0.96pt solid #000;">
-                            <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                                <colgroup>
-                                    <col style="width: 7.63%;">
-                                    <col style="width: 28.11%;">
-                                    <col style="width: 32.13%;">
-                                    <col style="width: 20.08%;">
-                                    <col style="width: 12.05%;">
-                                </colgroup>
-                                <tr>
-                                    <td class="center" style="width: 7.63%; height: 11pt; padding: 0; border: none; border-right: 0.96pt solid #000;">No.</td>
-                                    <td class="center" style="width: 28.11%; height: 11pt; padding: 0; border: none; border-right: 0.96pt solid #000;">Part No.</td>
-                                    <td class="center" style="width: 32.13%; height: 11pt; padding: 0; border: none; border-right: 0.96pt solid #000;">Part Name</td>
-                                    <td class="center" style="width: 20.08%; height: 11pt; padding: 0; border: none; border-right: 0.96pt solid #000;">Supplier</td>
-                                    <td class="center" style="width: 12.05%; height: 11pt; padding: 0; border: none;">Qty</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    @for($i = 1; $i <= 6; $i++)
-                        @php $mat = $materials[$i - 1] ?? null; @endphp
-                        <tr>
-                            <td style="padding: 0; border: none; border-bottom: 0.96pt solid #000;">
-                                <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                                    <colgroup>
-                                        <col style="width: 7.63%;">
-                                        <col style="width: 28.11%;">
-                                        <col style="width: 32.13%;">
-                                        <col style="width: 20.08%;">
-                                        <col style="width: 12.05%;">
-                                    </colgroup>
-                                    <tr>
-                                        <td class="center" style="width: 7.63%; height: 22.8pt; padding: 0; border: none; border-right: 0.96pt solid #000;">{{ $i }}</td>
-                                        <td style="width: 28.11%; padding: 0 4pt; border: none; border-right: 0.96pt solid #000;">{{ $mat['part_no'] ?? $mat['partNo'] ?? '' }}</td>
-                                        <td style="width: 32.13%; padding: 0 4pt; border: none; border-right: 0.96pt solid #000;">{{ $mat['part_name'] ?? $mat['partName'] ?? '' }}</td>
-                                        <td style="width: 20.08%; padding: 0 4pt; border: none; border-right: 0.96pt solid #000;">{{ $mat['supplier'] ?? '' }}</td>
-                                        <td class="center" style="width: 12.05%; padding: 0 2pt; border: none;">{{ $mat['qty'] ?? '' }}</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    @endfor
+    <div class="t " style="left:2pt;top:47.5pt;width:85pt;height:11.6pt;line-height:11.6pt;">Date</div>
+    <div class="t " style="left:89pt;top:47.5pt;width:4pt;height:11.6pt;line-height:11.6pt;">:</div>
+    <div class="t " style="left:93.5pt;top:47.5pt;width:107pt;height:11.6pt;{{ $fitText($dateVal, 107, 11.6, 8.6, 5, 0.55, 1) }}">{{ $dateVal }}</div>
 
-                    <!-- SECTION 2: REVISION STATUS -->
-                    <tr>
-                        <td class="section-header" style="height: 22.8pt; border: none; border-bottom: 0.96pt solid #000;">
-                            REVISION STATUS
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 0; border: none; border-bottom: 0.96pt solid #000;">
-                            <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                                <colgroup>
-                                    <col style="width: 7.63%;">
-                                    <col style="width: 44.17%;">
-                                    <col style="width: 12.05%;">
-                                    <col style="width: 20.08%;">
-                                    <col style="width: 16.07%;">
-                                </colgroup>
-                                <tr>
-                                    <td class="center" style="width: 7.63%; height: 11pt; padding: 0; border: none; border-right: 0.96pt solid #000;">No.</td>
-                                    <td class="center" style="width: 44.17%; height: 11pt; padding: 0; border: none; border-right: 0.96pt solid #000;">Modify Item</td>
-                                    <td class="center" style="width: 12.05%; height: 11pt; padding: 0; border: none; border-right: 0.96pt solid #000;">Date</td>
-                                    <td class="center" style="width: 20.08%; height: 11pt; padding: 0; border: none; border-right: 0.96pt solid #000;">Section</td>
-                                    <td class="center" style="width: 16.07%; height: 11pt; padding: 0; border: none;">Person</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    @for($r = 1; $r <= 5; $r++)
-                        @php $rev = $revisions[$r - 1] ?? null; @endphp
-                        <tr>
-                            <td style="padding: 0; border: none; {{ $r == 5 ? '' : 'border-bottom: 0.96pt solid #000;' }}">
-                                <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                                    <colgroup>
-                                        <col style="width: 7.63%;">
-                                        <col style="width: 44.17%;">
-                                        <col style="width: 12.05%;">
-                                        <col style="width: 20.08%;">
-                                        <col style="width: 16.07%;">
-                                    </colgroup>
-                                    <tr>
-                                        <td class="center" style="width: 7.63%; height: 22.8pt; padding: 0; border: none; border-right: 0.96pt solid #000;">{{ $r }}</td>
-                                        <td style="width: 44.17%; padding: 0 4pt; border: none; border-right: 0.96pt solid #000;">{{ $rev['change'] ?? $rev['item'] ?? $rev['modify_item'] ?? '' }}</td>
-                                        <td class="center" style="width: 12.05%; padding: 0 2pt; border: none; border-right: 0.96pt solid #000;">{{ $rev['date'] ?? '' }}</td>
-                                        <td class="center" style="width: 20.08%; padding: 0 2pt; border: none; border-right: 0.96pt solid #000;">{{ $rev['section'] ?? '' }}</td>
-                                        <td class="center" style="width: 16.07%; padding: 0 2pt; border: none;">{{ $rev['person'] ?? '' }}</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    @endfor
-                </table>
-            </td>
+    <div class="t " style="left:2pt;top:59.1pt;width:85pt;height:11.6pt;line-height:11.6pt;">Customer</div>
+    <div class="t " style="left:89pt;top:59.1pt;width:4pt;height:11.6pt;line-height:11.6pt;">:</div>
+    <div class="t " style="left:93.5pt;top:59.1pt;width:108pt;height:11.6pt;font-weight:bold;{{ $fitText($customerVal, 108, 11.6, 8.6, 5, 0.72, 1) }}">{{ $customerVal }}</div>
 
-            <!-- RIGHT COLUMN (54.0%) -->
-            <td style="width: 54.0%; padding: 0; vertical-align: top; border: none;">
-                <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-                    <!-- BOX 1: PHOTOGRAPHIC IMAGE OF PACKAGING (Height 216.2pt) -->
-                    <tr>
-                        <td style="height: 216.2pt; vertical-align: top; padding: 2pt 4pt; border: none; border-bottom: 0.96pt solid #000;">
-                            <div style="font-size: 8.6pt; color: #000; margin-bottom: 2pt;">(Photographic Image of Packaging)</div>
-                            <div style="text-align: center; margin-top: 20pt;">
-                                @if($photoImg)
-                                    <img src="{{ $photoImg }}" style="max-height: 165pt; max-width: 95%;" alt="Photographic Image">
-                                @else
-                                    <img src="{{ $defaultPhotoBubble }}" style="width: 100pt; height: auto;" alt="Visualisasi packing">
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                    
-                    <!-- BOX 2: PART IDENTIFICATION POINT (Height 147.8pt) -->
-                    <tr>
-                        <td style="height: 147.8pt; vertical-align: top; padding: 2pt 4pt; border: none; border-bottom: 0.96pt solid #000;">
-                            <div style="font-size: 8.6pt; color: #000; margin-bottom: 2pt;">(Part Identification Point)</div>
-                            <div style="text-align: center; margin-top: 10pt;">
-                                @if($labelImg)
-                                    <img src="{{ $labelImg }}" style="max-height: 105pt; max-width: 95%;" alt="Part Identification">
-                                @else
-                                    <img src="{{ $defaultLabelBubble }}" style="width: 100pt; height: auto;" alt="Label packing">
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
+    {{-- ================= JUDUL ================= --}}
+    @php
+        /* Judul diposisikan tepat di tengah kotak (tinggi 70.7pt).
+           DomPDF menurunkan teks kalau line-height-nya besar, jadi pakai line-height kecil
+           (= tinggi font) dan hitung top dari tengah kotak.
+           $titleNudge: koreksi halus (pt). Negatif = naik, positif = turun. */
+        $titleBoxH   = 70.7;
+        $titleLineH  = 24;
+        $titleNudge  = 1;
+        $titleTop    = round(($titleBoxH - $titleLineH) / 2 + $titleNudge, 2);
+    @endphp
+    <div class="t c title" style="left:202.9pt;top:{{ $titleTop }}pt;width:407.1pt;height:{{ $titleLineH }}pt;line-height:{{ $titleLineH }}pt;">PACKAGING STANDARD</div>
 
-                    <!-- BOX 3: AAIJ APPROVAL (Height 68.4pt) -->
-                    <tr>
-                        <td style="height: 68.4pt; padding: 0; vertical-align: top; border: none;">
-                            <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                                <colgroup>
-                                    <col style="width: 58.20%;">
-                                    <col style="width: 41.80%;">
-                                </colgroup>
-                                <tr>
-                                    <!-- AAIJ Approval Title Column (58.20%) -->
-                                    <td class="left" style="width: 58.20%; vertical-align: top; padding: 2pt 4pt; font-size: 8.6pt; border: none;">
-                                        AAIJ Approval
-                                    </td>
-                                    
-                                    <!-- QA, PPC, Purchasing Table (41.80%) -->
-                                    <td style="width: 41.80%; padding: 0; vertical-align: top; border: none; border-left: 0.96pt solid #000;">
-                                        <table style="width: 100%; table-layout: fixed; border-collapse: collapse;">
-                                            <colgroup>
-                                                <col style="width: 33.33%;">
-                                                <col style="width: 33.33%;">
-                                                <col style="width: 33.34%;">
-                                            </colgroup>
-                                            <tr>
-                                                <td class="center" style="height: 11pt; padding: 0; font-size: 8.6pt; border: none; border-bottom: 0.96pt solid #000; border-right: 0.96pt solid #000;">QA</td>
-                                                <td class="center" style="height: 11pt; padding: 0; font-size: 8.6pt; border: none; border-bottom: 0.96pt solid #000; border-right: 0.96pt solid #000;">PPC</td>
-                                                <td class="center" style="height: 11pt; padding: 0; font-size: 8.6pt; border: none; border-bottom: 0.96pt solid #000;">Purchasing</td>
-                                            </tr>
-                                            <tr>
-                                                <td style="height: 52.7pt; vertical-align: bottom; text-align: center; font-size: 8pt; padding: 0 2pt 2pt 2pt; border: none; border-bottom: 0.96pt solid #000; border-right: 0.96pt solid #000;">
-                                                    @if($ps->isApproved() && $ps->approved_by_name)
-                                                        {{ $ps->approved_by_name }}
-                                                    @endif
-                                                </td>
-                                                <td style="height: 52.7pt; vertical-align: bottom; text-align: center; font-size: 8pt; padding: 0 2pt 2pt 2pt; border: none; border-bottom: 0.96pt solid #000; border-right: 0.96pt solid #000;">
-                                                </td>
-                                                <td style="height: 52.7pt; vertical-align: bottom; text-align: center; font-size: 8pt; padding: 0 2pt 2pt 2pt; border: none; border-bottom: 0.96pt solid #000;">
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="height: 11pt; text-align: center; font-size: 7pt; padding: 0; border: none; border-right: 0.96pt solid #000;">
-                                                    @if($ps->isApproved() && $ps->approved_at)
-                                                        {{ $ps->approved_at->format('d/m/y') }}
-                                                    @endif
-                                                </td>
-                                                <td style="height: 11pt; text-align: center; font-size: 7pt; padding: 0; border: none; border-right: 0.96pt solid #000;">
-                                                </td>
-                                                <td style="height: 11pt; text-align: center; font-size: 7pt; padding: 0; border: none;">
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
+    {{-- ================= APPROVED / CHECKED / PREPARED (QR + nama pas di kotak) ================= --}}
+    @foreach($signBoxes as $b)
+        <div class="t c" style="left:{{ $b['left'] }}pt;top:0pt;width:{{ $b['w'] }}pt;height:12.4pt;line-height:12.4pt;">{{ $b['label'] }}</div>
+
+        @if($b['qr'])
+            <img src="{{ $b['qr'] }}" style="position:absolute;left:{{ round($b['left'] + ($b['w'] - $qrSize) / 2, 2) }}pt;top:{{ $qrTop }}pt;width:{{ $qrSize }}pt;height:{{ $qrSize }}pt;" alt="{{ $b['label'] }} QR">
+        @endif
+
+        @if(!empty($b['name']))
+            <div class="t c" style="left:{{ $b['left'] + 2 }}pt;top:{{ $nameTop }}pt;width:{{ $b['w'] - 4 }}pt;height:{{ $nameH }}pt;font-weight:bold;{{ $fitText($b['name'], $b['w'] - 4, $nameH, 6.5, 4.5, 0.72, 2) }}">{{ $b['name'] }}</div>
+        @endif
+    @endforeach
+
+    {{-- ================= INFORMASI UMUM & SPESIFIKASI ================= --}}
+    <div class="t " style="left:2pt;top:70.7pt;width:116.3pt;height:24.3pt;line-height:24.3pt;">Part No.</div>
+    <div class="t " style="left:118.3pt;top:70.7pt;width:4pt;height:24.3pt;line-height:24.3pt;">:</div>
+    <div class="t " style="left:122.9pt;top:70.7pt;width:235pt;height:24.3pt;{{ $fitText($partNoVal, 235) }}">{{ $partNoVal }}</div>
+
+    <div class="t " style="left:2pt;top:95pt;width:116.3pt;height:24.3pt;line-height:24.3pt;">Parts Name</div>
+    <div class="t " style="left:118.3pt;top:95pt;width:4pt;height:24.3pt;line-height:24.3pt;">:</div>
+    <div class="t " style="left:122.9pt;top:95pt;width:235pt;height:24.3pt;{{ $fitText($partNameVal, 235) }}">{{ $partNameVal }}</div>
+
+    <div class="t " style="left:2pt;top:119.3pt;width:116.3pt;height:24.3pt;line-height:24.3pt;">Packaging Type</div>
+    <div class="t " style="left:118.3pt;top:119.3pt;width:4pt;height:24.3pt;line-height:24.3pt;">:</div>
+    <div class="t " style="left:122.9pt;top:119.3pt;width:77pt;height:24.3pt;{{ $fitText($pkgTypeVal, 77) }}">{{ $pkgTypeVal }}</div>
+
+    <div class="t " style="left:2pt;top:143.6pt;width:116.3pt;height:24.3pt;line-height:24.3pt;font-size:7.5pt;">Packaging Size (mm)</div>
+    <div class="t " style="left:118.3pt;top:143.6pt;width:4pt;height:24.3pt;line-height:24.3pt;">:</div>
+    <div class="t " style="left:122.9pt;top:143.6pt;width:77pt;height:24.3pt;{{ $fitText($pkgSizeVal, 77) }}">{{ $pkgSizeVal }}</div>
+
+    <div class="t " style="left:2pt;top:167.9pt;width:116.3pt;height:24.3pt;line-height:24.3pt;">Packaging Lot (pcs/box)</div>
+    <div class="t " style="left:118.3pt;top:167.9pt;width:4pt;height:24.3pt;line-height:24.3pt;">:</div>
+    <div class="t " style="left:122.9pt;top:167.9pt;width:77pt;height:24.3pt;{{ $fitText($pkgLotVal, 77) }}">{{ $pkgLotVal }}</div>
+
+    <div class="t " style="left:205.3pt;top:119.3pt;width:101.8pt;height:24.3pt;line-height:24.3pt;">Net Weight (g/pc)</div>
+    <div class="t " style="left:307.1pt;top:119.3pt;width:4pt;height:24.3pt;line-height:24.3pt;">:</div>
+    <div class="t " style="left:311.7pt;top:119.3pt;width:46pt;height:24.3pt;{{ $fitText($netWeightVal, 46) }}">{{ $netWeightVal }}</div>
+
+    <div class="t " style="left:205.3pt;top:143.6pt;width:101.8pt;height:24.3pt;line-height:24.3pt;">Total Weight (kg/box)</div>
+    <div class="t " style="left:307.1pt;top:143.6pt;width:4pt;height:24.3pt;line-height:24.3pt;">:</div>
+    <div class="t " style="left:311.7pt;top:143.6pt;width:46pt;height:24.3pt;{{ $fitText($totWeightVal, 46) }}">{{ $totWeightVal }}</div>
+
+    {{-- ================= TABEL MATERIAL ================= --}}
+    <div class="t c" style="left:0pt;top:192.2pt;width:362.6pt;height:24.3pt;line-height:24.3pt;">PART / PACKAGING MATERIALS</div>
+    <div class="t c" style="left:0pt;top:216.5pt;width:28.8pt;height:11.9pt;line-height:11.9pt;">No.</div>
+    <div class="t c" style="left:28.8pt;top:216.5pt;width:101.4pt;height:11.9pt;line-height:11.9pt;">Part No.</div>
+    <div class="t c" style="left:130.2pt;top:216.5pt;width:116.5pt;height:11.9pt;line-height:11.9pt;">Part Name</div>
+    <div class="t c" style="left:246.7pt;top:216.5pt;width:72.7pt;height:11.9pt;line-height:11.9pt;">Supplier</div>
+    <div class="t c" style="left:319.4pt;top:216.5pt;width:43.2pt;height:11.9pt;line-height:11.9pt;">Qty</div>
+
+    @for($i = 0; $i < 6; $i++)
+        @php
+            $row = $materials[$i] ?? [];
+            $y   = 228.4 + $i * 24.3;
+            $mPn = $pick($row, ['part_no', 'partNo']);
+            $mNm = $pick($row, ['part_name', 'partName']);
+            $mSp = $pick($row, ['supplier']);
+            $mQt = $pick($row, ['qty']);
+        @endphp
+        <div class="t c" style="left:0pt;top:{{ $y }}pt;width:28.8pt;height:24.3pt;line-height:24.3pt">{{ $i + 1 }}</div>
+        <div class="t" style="left:30.8pt;top:{{ $y }}pt;width:97.4pt;height:24.3pt;{{ $fitText($mPn, 97.4) }}">{{ $mPn }}</div>
+        <div class="t" style="left:132.2pt;top:{{ $y }}pt;width:112.5pt;height:24.3pt;{{ $fitText($mNm, 112.5) }}">{{ $mNm }}</div>
+        <div class="t" style="left:248.7pt;top:{{ $y }}pt;width:68.7pt;height:24.3pt;{{ $fitText($mSp, 68.7) }}">{{ $mSp }}</div>
+        <div class="t c" style="left:319.4pt;top:{{ $y }}pt;width:43.2pt;height:24.3pt;{{ $fitText($mQt, 41) }}">{{ $mQt }}</div>
+    @endfor
+
+    {{-- ================= TABEL REVISI ================= --}}
+    <div class="t c" style="left:0pt;top:374.2pt;width:362.6pt;height:24.3pt;line-height:24.3pt;">REVISION STATUS</div>
+    <div class="t c" style="left:0pt;top:398.5pt;width:28.8pt;height:11.9pt;line-height:11.9pt;">No.</div>
+    <div class="t c" style="left:28.8pt;top:398.5pt;width:159.7pt;height:11.9pt;line-height:11.9pt;">Modify Item</div>
+    <div class="t c" style="left:188.5pt;top:398.5pt;width:43.8pt;height:11.9pt;line-height:11.9pt;">Date</div>
+    <div class="t c" style="left:232.3pt;top:398.5pt;width:72.7pt;height:11.9pt;line-height:11.9pt;">Section</div>
+    <div class="t c" style="left:305pt;top:398.5pt;width:57.6pt;height:11.9pt;line-height:11.9pt;">Person</div>
+
+    @for($i = 0; $i < 5; $i++)
+        @php
+            $row = $revisions[$i] ?? [];
+            $y   = 410.4 + $i * 24.3;
+            $rIt = $pick($row, ['change', 'item', 'modify_item']);
+            $rDt = $pick($row, ['date']);
+            $rSc = $pick($row, ['section']);
+            $rPs = $pick($row, ['person']);
+        @endphp
+        <div class="t c" style="left:0pt;top:{{ $y }}pt;width:28.8pt;height:24.3pt;line-height:24.3pt">{{ $i + 1 }}</div>
+        <div class="t" style="left:30.8pt;top:{{ $y }}pt;width:155.7pt;height:24.3pt;{{ $fitText($rIt, 155.7) }}">{{ $rIt }}</div>
+        <div class="t c" style="left:188.5pt;top:{{ $y }}pt;width:43.8pt;height:24.3pt;{{ $fitText($rDt, 41.8) }}">{{ $rDt }}</div>
+        <div class="t c" style="left:232.3pt;top:{{ $y }}pt;width:72.7pt;height:24.3pt;{{ $fitText($rSc, 70.7) }}">{{ $rSc }}</div>
+        <div class="t c" style="left:305pt;top:{{ $y }}pt;width:57.6pt;height:24.3pt;{{ $fitText($rPs, 55.6) }}">{{ $rPs }}</div>
+    @endfor
+
+    {{-- ================= JUDUL KOTAK FOTO ================= --}}
+    <div class="t " style="left:365pt;top:70.7pt;width:415pt;height:12pt;line-height:12pt;">(Photographic Image of Packaging)</div>
+    <div class="t " style="left:365pt;top:301pt;width:415pt;height:12pt;line-height:12pt;">(Part Identification Point)</div>
+
+    {{-- ================= FOTO PACKAGING (grid otomatis) ================= --}}
+    @if(count($photoItems) > 0)
+        @foreach($photoItems as $i => $it)
+            <img src="{{ $it['uri'] }}" style="position:absolute;left:{{ $it['left'] }}pt;top:{{ $it['top'] }}pt;width:{{ $it['w'] }}pt;height:{{ $it['h'] }}pt" alt="Photo {{ $i + 1 }}">
+        @endforeach
+    @elseif($bubblePhoto)
+        <img src="{{ $bubblePhoto }}" style="position:absolute;left:490.2pt;top:103.44pt;width:107.1pt;height:102.24pt" alt="Visualisasi packing">
+    @endif
+
+    {{-- ================= FOTO PART IDENTIFICATION (grid otomatis) ================= --}}
+    @if(count($labelItems) > 0)
+        @foreach($labelItems as $i => $it)
+            <img src="{{ $it['uri'] }}" style="position:absolute;left:{{ $it['left'] }}pt;top:{{ $it['top'] }}pt;width:{{ $it['w'] }}pt;height:{{ $it['h'] }}pt" alt="Label {{ $i + 1 }}">
+        @endforeach
+    @elseif($bubbleLabel)
+        <img src="{{ $bubbleLabel }}" style="position:absolute;left:474.72pt;top:317.1pt;width:106.74pt;height:102.6pt" alt="Label packing">
+    @endif
+
+    {{-- ================= AAIJ APPROVAL: QA / PPC / PURCHASING ================= --}}
+    <div class="t " style="left:365pt;top:458.8pt;width:240pt;height:12pt;line-height:12pt;">AAIJ Approval</div>
+    <div class="t c" style="left:610pt;top:458.8pt;width:58.3pt;height:12.4pt;line-height:12.4pt;">QA</div>
+
+    @if(!empty($approverSignature) && isset($qrService))
+        @php
+            try {
+                $approverQr = $qrService->generate(
+                    $approverSignature->npk,
+                    $approverSignature->name,
+                    $approverSignature->role_label
+                );
+            } catch (\Exception $e) {
+                \Log::error('Failed to generate approver QR in PS PDF', [
+                    'signature_id' => $approverSignature->id,
+                    'error'        => $e->getMessage(),
+                ]);
+                $approverQr = null;
+            }
+            $apvDate = $approverSignature->signed_at->format('d/m/Y');
+        @endphp
+        @if($approverQr)
+            <img src="{{ $approverQr }}" style="position:absolute;left:{{ round(610 + (58.3 - 36) / 2, 2) }}pt;top:472.5pt;width:36pt;height:36pt;" alt="QA Approver QR">
+            <div class="t c" style="left:612pt;top:509pt;width:54.3pt;height:11pt;font-weight:bold;{{ $fitText($approverSignature->name, 54.3, 11, 7, 4.5, 0.72, 2) }}">{{ $approverSignature->name }}</div>
+            <div class="t c" style="left:610pt;top:521pt;width:58.3pt;height:10pt;line-height:10pt;font-size:6pt;">{{ $apvDate }}</div>
+        @else
+            <div class="t c" style="left:612pt;top:508pt;width:54.3pt;height:10pt;{{ $fitText($approverSignature->name, 54.3, 10, 8, 4.5, 0.55, 1) }}">{{ $approverSignature->name }}</div>
+            <div class="t c" style="left:610pt;top:519pt;width:58.3pt;height:13pt;line-height:13pt;font-size:7pt;">{{ $apvDate }}</div>
+        @endif
+    @else
+        <div class="t c" style="left:612pt;top:508pt;width:54.3pt;height:10pt;{{ $fitText($qaName, 54.3, 10, 8, 4.5, 0.55, 1) }}">{{ $qaName }}</div>
+        <div class="t c" style="left:610pt;top:519pt;width:58.3pt;height:13pt;line-height:13pt;font-size:7pt;">{{ $qaDate }}</div>
+    @endif
+
+    <div class="t c" style="left:668.3pt;top:458.8pt;width:58.2pt;height:12.4pt;line-height:12.4pt;">PPC</div>
+    <div class="t c" style="left:726.5pt;top:458.8pt;width:57.5pt;height:12.4pt;line-height:12.4pt;">Purchasing</div>
 </div>
-
 </body>
 </html>

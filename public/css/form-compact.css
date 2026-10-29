@@ -1,0 +1,129 @@
+/* Form Compact & Centered Layout */
+.form-compact-container {
+    max-width: 900px !important;
+    margin: 0 auto !important;
+    padding: 1rem !important;
+}
+
+/* Make all columns full width (1 column layout) */
+.form-compact-container .col-md-6,
+.form-compact-container .col-md-4,
+.form-compact-container .col-md-3,
+.form-compact-container .col-md-8 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+}
+
+/* Reduce spacing */
+.form-compact-container .mb-3 {
+    margin-bottom: 0.75rem !important;
+}
+
+.form-compact-container .mb-4 {
+    margin-bottom: 1rem !important;
+}
+
+.form-compact-container .py-4 {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+.form-compact-container .py-3 {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+}
+
+/* Card spacing */
+.form-compact-container .card {
+    margin-bottom: 1rem !important;
+}
+
+.form-compact-container .card-body {
+    padding: 1rem !important;
+}
+
+.form-compact-container .card-header {
+    padding: 0.75rem 1rem !important;
+}
+
+/* Form label spacing */
+.form-compact-container .form-label {
+    margin-bottom: 0.25rem !important;
+    font-weight: 500;
+}
+
+/* Input spacing */
+.form-compact-container .form-control,
+.form-compact-container .form-select {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.925rem;
+}
+
+/* Row spacing */
+.form-compact-container .row {
+    margin-left: -0.5rem !important;
+    margin-right: -0.5rem !important;
+}
+
+.form-compact-container .row > * {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+}
+
+/* Header title */
+.form-compact-container h3,
+.form-compact-container h2 {
+    font-size: 1.5rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.form-compact-container h5 {
+    font-size: 1.1rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Button spacing */
+.form-compact-container .btn {
+    padding: 0.5rem 1rem !important;
+}
+
+/* Alert spacing */
+.form-compact-container .alert {
+    padding: 0.75rem 1rem !important;
+    margin-bottom: 0.75rem !important;
+}
+
+/* Hide stepper if exists */
+.form-compact-container .step-item,
+.form-compact-container .stepper {
+    display: none !important;
+}
+
+/* Simplify header */
+.form-compact-container .bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.form-compact-container .card.bg-gradient-primary .card-body {
+    padding: 1.25rem !important;
+}
+
+.form-compact-container .card.bg-gradient-primary h2 {
+    font-size: 1.4rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.form-compact-container .card.bg-gradient-primary p {
+    font-size: 0.9rem !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* Hide extra columns in header */
+.form-compact-container .card.bg-gradient-primary .col-md-4 {
+    display: none !important;
+}
+
+.form-compact-container .card.bg-gradient-primary .col-md-8 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+}

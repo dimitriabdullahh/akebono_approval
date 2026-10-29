@@ -27,7 +27,7 @@
         @stack('styles')
     </head>
     <body>
-        @auth
+        @if(auth()->guard('employee')->check() || auth()->check())
         <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
             <div class="container-fluid">
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -36,7 +36,14 @@
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <!-- Left side menu -->
                     <ul class="navbar-nav">
-                        @if(auth()->user()->isSupplier())
+                        @php
+                            $user = auth()->user();
+                            $employee = auth()->guard('employee')->user();
+                            $isSupplier = $user && method_exists($user, 'isSupplier') && $user->isSupplier();
+                            $isInternalAdmin = ($user && method_exists($user, 'isInternalAdmin') && $user->isInternalAdmin()) || $employee;
+                        @endphp
+                        
+                        @if($isSupplier)
                             <!-- Supplier Menu -->
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('supplier.dashboard') ? 'active' : '' }}" href="{{ route('supplier.dashboard') }}">
@@ -50,8 +57,8 @@
                                 </a>
                             </li>
                             --}}
-                        @elseif(auth()->user()->isInternalAdmin())
-                            <!-- Admin Menu -->
+                        @elseif($isInternalAdmin)
+                            <!-- Admin/Employee Menu -->
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('dashboard*') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                                     <i class="ti ti-dashboard"></i> Dashboard
@@ -74,15 +81,30 @@
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
-                                <i class="ti ti-user-circle"></i> {{ auth()->user()->name }}
-                                @if(auth()->user()->isSupplier())
+                                @php
+                                    $displayUser = auth()->user() ?? auth()->guard('employee')->user();
+                                    $displayName = $displayUser->name ?? 'User';
+                                    $isSupplierUser = auth()->check() && method_exists(auth()->user(), 'isSupplier') && auth()->user()->isSupplier();
+                                @endphp
+                                
+                                <i class="ti ti-user-circle"></i> {{ $displayName }}
+                                @if($isSupplierUser)
                                     <small class="text-muted">({{ auth()->user()->supplier->name }})</small>
+                                @elseif(auth()->guard('employee')->check())
+                                    <small class="text-muted">({{ auth()->guard('employee')->user()->npk }})</small>
                                 @endif
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                <li><span class="dropdown-item-text">Role: <strong>{{ ucfirst(str_replace('_', ' ', auth()->user()->role)) }}</strong></span></li>
-                                @if(auth()->user()->isSupplier())
-                                    <li><span class="dropdown-item-text text-truncate" style="max-width: 250px;">Supplier: <strong>{{ auth()->user()->supplier->name }}</strong></span></li>
+                                @if(auth()->guard('employee')->check())
+                                    @php $emp = auth()->guard('employee')->user(); @endphp
+                                    <li><span class="dropdown-item-text">NPK: <strong>{{ $emp->npk }}</strong></span></li>
+                                    <li><span class="dropdown-item-text">Division: <strong>{{ $emp->division }}</strong></span></li>
+                                    <li><span class="dropdown-item-text">Role: <strong>{{ $emp->role }}</strong></span></li>
+                                @elseif(auth()->check())
+                                    <li><span class="dropdown-item-text">Role: <strong>{{ ucfirst(str_replace('_', ' ', auth()->user()->role)) }}</strong></span></li>
+                                    @if(method_exists(auth()->user(), 'isSupplier') && auth()->user()->isSupplier())
+                                        <li><span class="dropdown-item-text text-truncate" style="max-width: 250px;">Supplier: <strong>{{ auth()->user()->supplier->name }}</strong></span></li>
+                                    @endif
                                 @endif
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
@@ -99,7 +121,7 @@
                 </div>
             </div>
         </nav>
-        @endauth
+        @endif
 
         @if ($errors->any())
         <div class="container mt-3">

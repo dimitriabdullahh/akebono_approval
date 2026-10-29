@@ -30,6 +30,18 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="category" class="form-label">Category <span class="text-danger">*</span></label>
+                            <select class="form-select @error('category') is-invalid @enderror" id="category" name="category" required>
+                                <option value="">-- Pilih Category --</option>
+                                <option value="New Part" @selected(old('category') == 'New Part')>New Part</option>
+                                <option value="4M Change" @selected(old('category') == '4M Change')>4M Change</option>
+                            </select>
+                            @error('category')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="mb-3">
                             <label for="model" class="form-label">Model <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('model') is-invalid @enderror" id="model" name="model" value="{{ old('model') }}" required>
                             @error('model')

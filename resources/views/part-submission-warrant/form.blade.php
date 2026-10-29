@@ -8,6 +8,7 @@
     <div class="row mb-4">
         <div class="col-12">
             <h3 class="mb-3">Part Submission Warrant (PSW) Form</h3>
+            <p class="text-muted">Complete all required fields marked with <span class="text-danger">*</span></p>
         </div>
     </div>
 
@@ -15,143 +16,358 @@
     <form id="pswForm" method="POST" enctype="multipart/form-data">
         @csrf
 
-        <!-- Section 1: General Information -->
+        <!-- General Information -->
         <div class="card mb-4">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">General Information</h5>
-            </div>
             <div class="card-body">
+                <h5 class="mb-3"><i class="ti ti-info-circle me-2"></i>General Information</h5>
                 <div class="row">
-                    <!-- Model -->
-                    <div class="col-md-6 mb-3">
-                        <label for="model" class="form-label">Model <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control bg-light" id="model" name="model" required readonly placeholder="Auto-populated">
-                        <small class="form-text text-muted">Auto-populated from request</small>
-                    </div>
-
-                    <!-- Date of Issued -->
-                    <div class="col-md-6 mb-3">
-                        <label for="date_issued" class="form-label">Date of Issued <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="date_issued" name="date_issued" required>
-                    </div>
-
-                    <!-- Ref. No -->
-                    <div class="col-md-6 mb-3">
-                        <label for="ref_no" class="form-label">Ref. No <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="ref_no" name="ref_no" required placeholder="Enter reference number">
-                    </div>
-
-                    <!-- Part Route -->
-                    <div class="col-md-6 mb-3">
-                        <label for="part_route" class="form-label">Part Route</label>
-                        <input type="text" class="form-control" id="part_route" name="part_route" placeholder="Enter part route">
-                    </div>
-
-                    <!-- Part No -->
-                    <div class="col-md-6 mb-3">
-                        <label for="part_no" class="form-label">Part No <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control bg-light" id="part_no" name="part_no" required readonly placeholder="Auto-populated">
-                        <small class="form-text text-muted">Auto-populated from request</small>
-                    </div>
-
                     <!-- Part Name -->
                     <div class="col-md-6 mb-3">
                         <label for="part_name" class="form-label">Part Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control bg-light" id="part_name" name="part_name" required readonly placeholder="Auto-populated">
-                        <small class="form-text text-muted">Auto-populated from request</small>
+                        <input type="text" class="form-control bg-light" id="part_name" name="part_name" required readonly>
+                        <small class="text-muted">Auto-populated from request</small>
                     </div>
 
-                    <!-- Manufacturer -->
+                    <!-- Part Number -->
                     <div class="col-md-6 mb-3">
-                        <label for="manufacturer" class="form-label">Manufacturer <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control bg-light" id="manufacturer" name="manufacturer" required readonly placeholder="Auto-populated">
-                        <small class="form-text text-muted">Auto-populated (Supplier name)</small>
+                        <label for="part_number" class="form-label">Part Number <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control bg-light" id="part_number" name="part_number" required readonly>
+                        <small class="text-muted">Auto-populated from request</small>
                     </div>
 
-                    <!-- Material -->
-                    <div class="col-md-6 mb-3">
-                        <label for="material" class="form-label">Material <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="material" name="material" required placeholder="Enter material specification">
+                    <!-- Safety/Government Regulation -->
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Safety and/or Government Regulation <span class="text-danger">*</span></label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="safety_government_regulation" id="safety_yes" value="1" required>
+                            <label class="form-check-label" for="safety_yes">Yes</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="safety_government_regulation" id="safety_no" value="0" required>
+                            <label class="form-check-label" for="safety_no">No</label>
+                        </div>
                     </div>
 
-                    <!-- General Tolerance -->
-                    <div class="col-md-6 mb-3">
-                        <label for="general_tolerance" class="form-label">General Tolerance</label>
-                        <input type="text" class="form-control" id="general_tolerance" name="general_tolerance" placeholder="e.g., ±0.1mm">
+                    <!-- Engineering Drawing Change Level -->
+                    <div class="col-md-4 mb-3">
+                        <label for="engineering_drawing_change_level" class="form-label">Engineering Drawing Change Level</label>
+                        <input type="text" class="form-control" id="engineering_drawing_change_level" name="engineering_drawing_change_level">
                     </div>
 
-                    <!-- Weight -->
-                    <div class="col-md-6 mb-3">
-                        <label for="weight" class="form-label">Weight</label>
-                        <input type="text" class="form-control" id="weight" name="weight" placeholder="Enter weight with unit">
+                    <!-- Dated -->
+                    <div class="col-md-2 mb-3">
+                        <label for="engineering_drawing_change_date" class="form-label">Dated</label>
+                        <input type="date" class="form-control" id="engineering_drawing_change_date" name="engineering_drawing_change_date">
                     </div>
 
-                    <!-- Revision Date -->
-                    <div class="col-md-6 mb-3">
-                        <label for="revision_date" class="form-label">Revision Date</label>
-                        <input type="date" class="form-control" id="revision_date" name="revision_date">
+                    <!-- Additional Engineering Changes -->
+                    <div class="col-md-4 mb-3">
+                        <label for="additional_engineering_changes" class="form-label">Additional Engineering Changes</label>
+                        <input type="text" class="form-control" id="additional_engineering_changes" name="additional_engineering_changes">
                     </div>
 
-                    <!-- Revision Record -->
-                    <div class="col-md-6 mb-3">
-                        <label for="revision_record" class="form-label">Revision Record</label>
-                        <input type="text" class="form-control" id="revision_record" name="revision_record" placeholder="Revision history">
+                    <!-- Dated -->
+                    <div class="col-md-2 mb-3">
+                        <label for="additional_engineering_changes_date" class="form-label">Dated</label>
+                        <input type="date" class="form-control" id="additional_engineering_changes_date" name="additional_engineering_changes_date">
+                    </div>
+
+                    <!-- Shown on Drawing No -->
+                    <div class="col-md-4 mb-3">
+                        <label for="shown_on_drawing_no" class="form-label">Shown on Drawing No.</label>
+                        <input type="text" class="form-control" id="shown_on_drawing_no" name="shown_on_drawing_no">
+                    </div>
+
+                    <!-- Purchase Order No -->
+                    <div class="col-md-4 mb-3">
+                        <label for="purchase_order_no" class="form-label">Purchase Order No.</label>
+                        <input type="text" class="form-control" id="purchase_order_no" name="purchase_order_no">
+                    </div>
+
+                    <!-- Weight (kg) -->
+                    <div class="col-md-4 mb-3">
+                        <label for="weight_kg" class="form-label">Weight (kg)</label>
+                        <input type="number" step="0.001" min="0" class="form-control" id="weight_kg" name="weight_kg">
+                    </div>
+
+                    <!-- Checking Aid No -->
+                    <div class="col-md-4 mb-3">
+                        <label for="checking_aid_no" class="form-label">Checking Aid No.</label>
+                        <input type="text" class="form-control" id="checking_aid_no" name="checking_aid_no">
+                    </div>
+
+                    <!-- Process Engineering Change Level -->
+                    <div class="col-md-4 mb-3">
+                        <label for="process_engineering_change_level" class="form-label">Process Engineering Change Level</label>
+                        <input type="text" class="form-control" id="process_engineering_change_level" name="process_engineering_change_level">
+                    </div>
+
+                    <!-- Dated -->
+                    <div class="col-md-4 mb-3">
+                        <label for="process_engineering_change_date" class="form-label">Dated</label>
+                        <input type="date" class="form-control" id="process_engineering_change_date" name="process_engineering_change_date">
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Section 2: Part Drawings -->
+        <!-- Supplier & Submission Information -->
         <div class="card mb-4">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Part Drawings</h5>
-                <button type="button" class="btn btn-sm btn-primary" onclick="addDrawing()">
-                    <i class="ti ti-plus"></i> Add Drawing
-                </button>
-            </div>
             <div class="card-body">
-                <div id="drawingsContainer">
-                    <!-- Drawings will be added here -->
+                <h5 class="mb-3"><i class="ti ti-building me-2"></i>Supplier & Submission Information</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Supplier Manufacturing Information</h6>
+                        
+                        <!-- Supplier Name & Code -->
+                        <div class="mb-3">
+                            <label for="supplier_name" class="form-label">Supplier Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control bg-light" id="supplier_name" name="supplier_name" required readonly>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="supplier_code" class="form-label">Supplier Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control bg-light" id="supplier_code" name="supplier_code" required readonly>
+                        </div>
+
+                        <!-- Street Address -->
+                        <div class="mb-3">
+                            <label for="street_address" class="form-label">Street Address</label>
+                            <input type="text" class="form-control bg-light" id="street_address" name="street_address" readonly>
+                        </div>
+
+                        <!-- City, State, Zip -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="city" class="form-label">City</label>
+                                <input type="text" class="form-control bg-light" id="city" name="city" readonly>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="state" class="form-label">State</label>
+                                <input type="text" class="form-control bg-light" id="state" name="state" readonly>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="zip" class="form-label">Zip</label>
+                                <input type="text" class="form-control bg-light" id="zip" name="zip" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Submission Information</h6>
+                        
+                        <!-- Submission Information Checkboxes -->
+                        <div class="mb-3">
+                            <label class="form-label">Select all that apply:</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="submission_dimensional" name="submission_information[]" value="dimensional">
+                                <label class="form-check-label" for="submission_dimensional">Dimensional</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="submission_materials" name="submission_information[]" value="materials_functional">
+                                <label class="form-check-label" for="submission_materials">Materials/Functional</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="submission_appearance" name="submission_information[]" value="appearance">
+                                <label class="form-check-label" for="submission_appearance">Appearance</label>
+                            </div>
+                        </div>
+
+                        <!-- Customer Name/Division -->
+                        <div class="mb-3">
+                            <label for="customer_name_division" class="form-label">Customer Name/Division</label>
+                            <input type="text" class="form-control bg-light" id="customer_name_division" name="customer_name_division" value="PT. AAIJ / Purchasing / QA" readonly>
+                        </div>
+
+                        <!-- Buyer/Buyer Code -->
+                        <div class="mb-3">
+                            <label for="buyer_buyer_code" class="form-label">Buyer/Buyer Code</label>
+                            <input type="text" class="form-control" id="buyer_buyer_code" name="buyer_buyer_code">
+                        </div>
+
+                        <!-- Application -->
+                        <div class="mb-3">
+                            <label for="application" class="form-label">Application</label>
+                            <input type="text" class="form-control" id="application" name="application">
+                        </div>
+                    </div>
                 </div>
-                <div id="noDrawingsMessage" class="alert alert-info">
-                    <i class="ti ti-info-circle me-2"></i>
-                    Click "Add Drawing" button above to add part drawings
+
+                <!-- Notes -->
+                <hr>
+                <h6 class="mb-3">Notes:</h6>
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Does this part contain any restricted or reportable substances?</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="contains_prohibited_substances" id="substance_yes" value="1">
+                            <label class="form-check-label" for="substance_yes">Yes</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="contains_prohibited_substances" id="substance_no" value="0" checked>
+                            <label class="form-check-label" for="substance_no">No</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Are plastic parts identified with appropriate ISO marking codes?</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="plastic_has_iso_marking" id="iso_yes" value="1">
+                            <label class="form-check-label" for="iso_yes">Yes</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="plastic_has_iso_marking" id="iso_no" value="0" checked>
+                            <label class="form-check-label" for="iso_no">No</label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Section 3: Inspection Items -->
+        <!-- Reason for Submission & Results -->
         <div class="card mb-4">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Inspection Items</h5>
-                <button type="button" class="btn btn-sm btn-primary" onclick="addInspectionItem()">
-                    <i class="ti ti-plus"></i> Add Item
-                </button>
-            </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered" id="inspectionItemsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 5%;">No.</th>
-                                <th style="width: 20%;">Inspection Item <span class="text-danger">*</span></th>
-                                <th style="width: 15%;">Inspection Instrument</th>
-                                <th style="width: 20%;">Inspection Criterion <span class="text-danger">*</span></th>
-                                <th style="width: 8%;">Rank <span class="text-danger">*</span></th>
-                                <th style="width: 10%;">Supplier Sampling</th>
-                                <th style="width: 10%;">AAIJ Sampling</th>
-                                <th style="width: 10%;">Remark / Method</th>
-                                <th style="width: 2%;"></th>
-                            </tr>
-                        </thead>
-                        <tbody id="inspectionItemsBody">
-                            <!-- Items will be added here -->
-                        </tbody>
-                    </table>
+                <h5 class="mb-3"><i class="ti ti-clipboard-list me-2"></i>Reason for Submission & Results</h5>
+                <h6 class="mb-3">Reason for Submission (Select all that apply)</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_initial" name="reason_for_submission[]" value="initial_submission">
+                            <label class="form-check-label" for="reason_initial">Initial Submission</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_eng_change" name="reason_for_submission[]" value="engineering_changes">
+                            <label class="form-check-label" for="reason_eng_change">Engineering Change(s)</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_tooling" name="reason_for_submission[]" value="tooling_transfer">
+                            <label class="form-check-label" for="reason_tooling">Tooling: Transfer, Replacement, Refurbishment, or additional</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_correction" name="reason_for_submission[]" value="correction_discrepancy">
+                            <label class="form-check-label" for="reason_correction">Correction of Discrepancy</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_inactive" name="reason_for_submission[]" value="tooling_inactive">
+                            <label class="form-check-label" for="reason_inactive">Tooling inactive > than 1 year</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_optional" name="reason_for_submission[]" value="change_optional_construction">
+                            <label class="form-check-label" for="reason_optional">Change to Optional Construction or Material</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_sub_supplier" name="reason_for_submission[]" value="sub_supplier_change">
+                            <label class="form-check-label" for="reason_sub_supplier">Sub-Supplier or Material Source Change</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_processing" name="reason_for_submission[]" value="change_part_processing">
+                            <label class="form-check-label" for="reason_processing">Change in Part Processing</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_additional" name="reason_for_submission[]" value="parts_additional_location">
+                            <label class="form-check-label" for="reason_additional">Parts Produced at Additional Location</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="reason_other" name="reason_for_submission[]" value="other">
+                            <label class="form-check-label" for="reason_other">Other - please specify</label>
+                        </div>
+                    </div>
                 </div>
-                <div id="noItemsMessage" class="alert alert-info mt-3">
-                    <i class="ti ti-info-circle me-2"></i>
-                    Click "Add Item" button above to add inspection items
+
+                <!-- REMOVED: reason_other_text field - column dropped from database
+                <div class="mb-3 mt-3">
+                    <label for="reason_other_text" class="form-label">Other Reason (if selected above)</label>
+                    <textarea class="form-control" id="reason_other_text" name="reason_other_text" rows="2"></textarea>
+                </div>
+                -->
+
+                <hr>
+
+                <h6 class="mb-3">Submission Results</h6>
+                <p class="text-muted">The results for:</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="result_dimensional" name="submission_results[]" value="dimensional_measurements">
+                            <label class="form-check-label" for="result_dimensional">Dimensional measurements</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="result_appearance" name="submission_results[]" value="appearance_criteria">
+                            <label class="form-check-label" for="result_appearance">Appearance criteria</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="result_material" name="submission_results[]" value="material_functional_tests">
+                            <label class="form-check-label" for="result_material">Material and functional tests</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="result_statistical" name="submission_results[]" value="statistical_process_evaluation">
+                            <label class="form-check-label" for="result_statistical">Statistical process evaluation</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3 mt-3">
+                    <label class="form-label">These results meet all drawing and specification requirements: <span class="text-danger">*</span></label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="meets_all_requirements" id="meets_yes" value="1" required>
+                        <label class="form-check-label" for="meets_yes">Yes</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="meets_all_requirements" id="meets_no" value="0" required>
+                        <label class="form-check-label" for="meets_no">No (if "No" - Explanation Required)</label>
+                    </div>
+                </div>
+
+                <div class="mb-3" id="explanation_if_not_meet_container" style="display: none;">
+                    <label for="explanation_if_not_meet" class="form-label">Explanation (Required when answer is "No") <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="explanation_if_not_meet" name="explanation_if_not_meet" rows="3" placeholder="Please explain why the results do not meet all requirements..."></textarea>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Declaration -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="mb-3"><i class="ti ti-file-signature me-2"></i>Declaration</h5>
+                <div class="alert alert-info">
+                    <strong>Declaration:</strong> I hereby affirm that the samples represented by this warrant are representative of our parts, and have been made to the applicable Customer drawings and specification and are made from specified materials on regular production tooling, regular production process. I have noted any deviations from this declaration below:
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label for="explanation_comments" class="form-label">Explanation/Comments</label>
+                        <textarea class="form-control" id="explanation_comments" name="explanation_comments" rows="3"></textarea>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="print_name" class="form-label">Print Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="print_name" name="print_name" required>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="phone_no" class="form-label">Phone No.</label>
+                        <input type="text" class="form-control" id="phone_no" name="phone_no">
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="fax_no" class="form-label">Fax No.</label>
+                        <input type="text" class="form-control" id="fax_no" name="fax_no">
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label for="signature_date" class="form-label">Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="signature_date" name="signature_date" required>
+                    </div>
                 </div>
             </div>
         </div>
@@ -179,244 +395,9 @@
 // ===== GLOBAL VARIABLES =====
 window.partSubmissionWarrantId = null;
 
-// ===== UTILITY FUNCTIONS =====
-function formatFileSize(bytes) {
-    if (!bytes) return 'Unknown';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    if (bytes === 0) return '0 Byte';
-    const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
-    return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
-}
-
-// ===== DRAWINGS MANAGEMENT =====
-function addDrawing() {
-    const index = drawingCounter++;
-    const drawing = {
-        id: null,
-        drawing_name: '',
-        drawing_no: '',
-        revision: '',
-        description: '',
-        file_path: null
-    };
-    
-    window.drawings.push(drawing);
-    
-    const container = document.getElementById('drawingsContainer');
-    const drawingCard = document.createElement('div');
-    drawingCard.className = 'card mb-3';
-    drawingCard.dataset.index = window.drawings.length - 1;
-    
-    drawingCard.innerHTML = `
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">Drawing #${window.drawings.length}</h6>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeDrawing(${window.drawings.length - 1})">
-                    <i class="ti ti-trash"></i>
-                </button>
-            </div>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Drawing Name</label>
-                    <input type="text" class="form-control" onchange="updateDrawing(${window.drawings.length - 1}, 'drawing_name', this.value)" placeholder="Drawing name">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Drawing No</label>
-                    <input type="text" class="form-control" onchange="updateDrawing(${window.drawings.length - 1}, 'drawing_no', this.value)" placeholder="Drawing number">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Revision</label>
-                    <input type="text" class="form-control" onchange="updateDrawing(${window.drawings.length - 1}, 'revision', this.value)" placeholder="Rev.">
-                </div>
-                <div class="col-md-12 mb-3">
-                    <label class="form-label">Description</label>
-                    <textarea class="form-control" rows="2" onchange="updateDrawing(${window.drawings.length - 1}, 'description', this.value)" placeholder="Description"></textarea>
-                </div>
-                <div class="col-md-12 mb-3">
-                    <label class="form-label">Drawing File (PDF/Image)</label>
-                    <input type="file" class="form-control" accept=".pdf,image/*" onchange="handleDrawingFileUpload(${window.drawings.length - 1}, this.files[0])">
-                    <div id="drawing-file-${window.drawings.length - 1}" class="mt-2"></div>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    container.appendChild(drawingCard);
-    document.getElementById('noDrawingsMessage').style.display = 'none';
-}
-
-function updateDrawing(index, field, value) {
-    if (window.drawings[index]) {
-        window.drawings[index][field] = value;
-    }
-}
-
-function handleDrawingFileUpload(index, file) {
-    if (!file) return;
-    
-    if (file.size > 10 * 1024 * 1024) {
-        Swal.fire('Error', 'File exceeds 10MB limit', 'error');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        window.drawings[index].file_path = e.target.result;
-        window.drawings[index].file_name = file.name;
-        
-        document.getElementById(`drawing-file-${index}`).innerHTML = `
-            <div class="alert alert-success">
-                <i class="ti ti-check"></i> ${file.name} (${formatFileSize(file.size)})
-            </div>
-        `;
-    };
-    reader.readAsDataURL(file);
-}
-
-function removeDrawing(index) {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: 'Do you want to remove this drawing?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, remove it!'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.drawings.splice(index, 1);
-            renderDrawings();
-        }
-    });
-}
-
-function renderDrawings() {
-    const container = document.getElementById('drawingsContainer');
-    container.innerHTML = '';
-    
-    if (window.drawings.length === 0) {
-        document.getElementById('noDrawingsMessage').style.display = 'block';
-        return;
-    }
-    
-    document.getElementById('noDrawingsMessage').style.display = 'none';
-    
-    window.drawings.forEach((drawing, index) => {
-        const drawingCard = document.createElement('div');
-        drawingCard.className = 'card mb-3';
-        
-        drawingCard.innerHTML = `
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="mb-0">Drawing #${index + 1}</h6>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="removeDrawing(${index})">
-                        <i class="ti ti-trash"></i>
-                    </button>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Drawing Name</label>
-                        <input type="text" class="form-control" value="${drawing.drawing_name || ''}" onchange="updateDrawing(${index}, 'drawing_name', this.value)">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Drawing No</label>
-                        <input type="text" class="form-control" value="${drawing.drawing_no || ''}" onchange="updateDrawing(${index}, 'drawing_no', this.value)">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Revision</label>
-                        <input type="text" class="form-control" value="${drawing.revision || ''}" onchange="updateDrawing(${index}, 'revision', this.value)">
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" rows="2" onchange="updateDrawing(${index}, 'description', this.value)">${drawing.description || ''}</textarea>
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label">Drawing File</label>
-                        ${drawing.file_path ? `<div class="alert alert-success"><i class="ti ti-check"></i> File uploaded</div>` : '<input type="file" class="form-control" accept=".pdf,image/*" onchange="handleDrawingFileUpload(' + index + ', this.files[0])">'}
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        container.appendChild(drawingCard);
-    });
-}
-
-// ===== INSPECTION ITEMS MANAGEMENT =====
-function addInspectionItem() {
-    const item = {
-        id: null,
-        inspection_item: '',
-        inspection_instrument: '',
-        inspection_criterion: '',
-        rank: '',
-        supplier_sampling: '',
-        aaij_sampling: '',
-        remark_inspection_method: ''
-    };
-    
-    window.inspectionItems.push(item);
-    renderInspectionItems();
-}
-
-function updateInspectionItem(index, field, value) {
-    if (window.inspectionItems[index]) {
-        window.inspectionItems[index][field] = value;
-    }
-}
-
-function removeInspectionItem(index) {
-    Swal.fire({
-        title: 'Are you sure?',
-        text: 'Do you want to remove this item?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Yes, remove it!'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.inspectionItems.splice(index, 1);
-            renderInspectionItems();
-        }
-    });
-}
-
-function renderInspectionItems() {
-    const tbody = document.getElementById('inspectionItemsBody');
-    tbody.innerHTML = '';
-    
-    if (window.inspectionItems.length === 0) {
-        document.getElementById('noItemsMessage').style.display = 'block';
-        return;
-    }
-    
-    document.getElementById('noItemsMessage').style.display = 'none';
-    
-    window.inspectionItems.forEach((item, index) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td class="text-center">${index + 1}</td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.inspection_item || ''}" onchange="updateInspectionItem(${index}, 'inspection_item', this.value)" required></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.inspection_instrument || ''}" onchange="updateInspectionItem(${index}, 'inspection_instrument', this.value)"></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.inspection_criterion || ''}" onchange="updateInspectionItem(${index}, 'inspection_criterion', this.value)" required></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.rank || ''}" onchange="updateInspectionItem(${index}, 'rank', this.value)" required></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.supplier_sampling || ''}" onchange="updateInspectionItem(${index}, 'supplier_sampling', this.value)"></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.aaij_sampling || ''}" onchange="updateInspectionItem(${index}, 'aaij_sampling', this.value)"></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.remark_inspection_method || ''}" onchange="updateInspectionItem(${index}, 'remark_inspection_method', this.value)"></td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeInspectionItem(${index})">
-                    <i class="ti ti-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(row);
-    });
-}
-
 // ===== FORM INITIALIZATION =====
 function initializeForm() {
-    console.log('🚀 Initializing IS form');
+    console.log('🚀 Initializing PSW form');
     
     const urlPath = window.location.pathname;
     const token = urlPath.split('/').pop();
@@ -428,7 +409,7 @@ function initializeForm() {
     
     console.log('📝 Token:', token);
     
-    fetch(`/api/psw/${token}`)
+    fetch(`/api/part-submission-warrants/${token}`)
         .then(response => {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
@@ -453,56 +434,158 @@ function initializeForm() {
 }
 
 function populateFormData(data) {
-    // General Information
-    if (data.model) document.getElementById('model').value = data.model;
-    if (data.date_issued) document.getElementById('date_issued').value = data.date_issued;
-    if (data.ref_no) document.getElementById('ref_no').value = data.ref_no;
-    if (data.part_route) document.getElementById('part_route').value = data.part_route;
-    if (data.part_no) document.getElementById('part_no').value = data.part_no;
+    // Step 1: General Information
+    console.log('🔍 populateFormData received:', data);
+    console.log('🔍 part_number value:', data.part_number);
+    console.log('🔍 part_name value:', data.part_name);
+    
     if (data.part_name) document.getElementById('part_name').value = data.part_name;
-    if (data.manufacturer) document.getElementById('manufacturer').value = data.manufacturer;
-    if (data.material) document.getElementById('material').value = data.material;
-    if (data.general_tolerance) document.getElementById('general_tolerance').value = data.general_tolerance;
-    if (data.weight) document.getElementById('weight').value = data.weight;
-    if (data.revision_date) document.getElementById('revision_date').value = data.revision_date;
-    if (data.revision_record) document.getElementById('revision_record').value = data.revision_record;
+    if (data.part_number) document.getElementById('part_number').value = data.part_number;
     
-    // Drawings
-    if (data.drawings && data.drawings.length > 0) {
-        window.drawings = data.drawings;
-        renderDrawings();
+    if (data.safety_government_regulation !== undefined) {
+        if (data.safety_government_regulation) {
+            document.getElementById('safety_yes').checked = true;
+        } else {
+            document.getElementById('safety_no').checked = true;
+        }
     }
     
-    // Inspection Items
-    if (data.inspection_items && data.inspection_items.length > 0) {
-        window.inspectionItems = data.inspection_items;
-        renderInspectionItems();
+    if (data.engineering_drawing_change_level) document.getElementById('engineering_drawing_change_level').value = data.engineering_drawing_change_level;
+    if (data.engineering_drawing_change_date) document.getElementById('engineering_drawing_change_date').value = data.engineering_drawing_change_date;
+    if (data.additional_engineering_changes) document.getElementById('additional_engineering_changes').value = data.additional_engineering_changes;
+    if (data.additional_engineering_changes_date) document.getElementById('additional_engineering_changes_date').value = data.additional_engineering_changes_date;
+    if (data.shown_on_drawing_no) document.getElementById('shown_on_drawing_no').value = data.shown_on_drawing_no;
+    if (data.purchase_order_no) document.getElementById('purchase_order_no').value = data.purchase_order_no;
+    if (data.weight_kg) document.getElementById('weight_kg').value = data.weight_kg;
+    if (data.checking_aid_no) document.getElementById('checking_aid_no').value = data.checking_aid_no;
+    if (data.process_engineering_change_level) document.getElementById('process_engineering_change_level').value = data.process_engineering_change_level;
+    if (data.process_engineering_change_date) document.getElementById('process_engineering_change_date').value = data.process_engineering_change_date;
+    
+    // Step 2: Supplier & Submission
+    if (data.supplier_name) document.getElementById('supplier_name').value = data.supplier_name;
+    if (data.supplier_code) document.getElementById('supplier_code').value = data.supplier_code;
+    if (data.street_address) document.getElementById('street_address').value = data.street_address;
+    if (data.city) document.getElementById('city').value = data.city;
+    if (data.state) document.getElementById('state').value = data.state;
+    if (data.zip) document.getElementById('zip').value = data.zip;
+    if (data.customer_name_division) document.getElementById('customer_name_division').value = data.customer_name_division;
+    if (data.buyer_buyer_code) document.getElementById('buyer_buyer_code').value = data.buyer_buyer_code;
+    if (data.application) document.getElementById('application').value = data.application;
+    
+    // Submission Information
+    if (data.submission_information && Array.isArray(data.submission_information)) {
+        data.submission_information.forEach(value => {
+            const checkbox = document.querySelector(`input[name="submission_information[]"][value="${value}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
     }
+    
+    // Notes
+    if (data.contains_prohibited_substances !== undefined) {
+        if (data.contains_prohibited_substances) {
+            document.getElementById('substance_yes').checked = true;
+        } else {
+            document.getElementById('substance_no').checked = true;
+        }
+    }
+    
+    if (data.plastic_has_iso_marking !== undefined) {
+        if (data.plastic_has_iso_marking) {
+            document.getElementById('iso_yes').checked = true;
+        } else {
+            document.getElementById('iso_no').checked = true;
+        }
+    }
+    
+    // Step 3: Reason & Results
+    if (data.reason_for_submission && Array.isArray(data.reason_for_submission)) {
+        data.reason_for_submission.forEach(value => {
+            const checkbox = document.querySelector(`input[name="reason_for_submission[]"][value="${value}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+    
+    // REMOVED: reason_other_text - column dropped from database
+    // if (data.reason_other_text) document.getElementById('reason_other_text').value = data.reason_other_text;
+    
+    if (data.submission_results && Array.isArray(data.submission_results)) {
+        data.submission_results.forEach(value => {
+            const checkbox = document.querySelector(`input[name="submission_results[]"][value="${value}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+    
+    if (data.meets_all_requirements !== undefined) {
+        if (data.meets_all_requirements) {
+            document.getElementById('meets_yes').checked = true;
+            document.getElementById('explanation_if_not_meet_container').style.display = 'none';
+        } else {
+            document.getElementById('meets_no').checked = true;
+            document.getElementById('explanation_if_not_meet_container').style.display = 'block';
+        }
+    }
+    
+    if (data.explanation_if_not_meet) document.getElementById('explanation_if_not_meet').value = data.explanation_if_not_meet;
+    
+    // Step 4: Declaration
+    if (data.explanation_comments) document.getElementById('explanation_comments').value = data.explanation_comments;
+    if (data.print_name) document.getElementById('print_name').value = data.print_name;
+    if (data.title) document.getElementById('title').value = data.title;
+    if (data.phone_no) document.getElementById('phone_no').value = data.phone_no;
+    if (data.fax_no) document.getElementById('fax_no').value = data.fax_no;
+    if (data.signature_date) document.getElementById('signature_date').value = data.signature_date;
 }
 
 function collectFormData() {
     return {
-        model: document.getElementById('model').value,
-        date_issued: document.getElementById('date_issued').value,
-        ref_no: document.getElementById('ref_no').value,
-        part_route: document.getElementById('part_route').value,
-        part_no: document.getElementById('part_no').value,
+        // Step 1
         part_name: document.getElementById('part_name').value,
-        manufacturer: document.getElementById('manufacturer').value,
-        material: document.getElementById('material').value,
-        general_tolerance: document.getElementById('general_tolerance').value,
-        weight: document.getElementById('weight').value,
-        revision_date: document.getElementById('revision_date').value,
-        revision_record: document.getElementById('revision_record').value,
-        drawings: window.drawings,
-        inspection_items: window.inspectionItems
+        part_number: document.getElementById('part_number').value,
+        safety_government_regulation: document.querySelector('input[name="safety_government_regulation"]:checked')?.value === '1',
+        engineering_drawing_change_level: document.getElementById('engineering_drawing_change_level').value,
+        engineering_drawing_change_date: document.getElementById('engineering_drawing_change_date').value,
+        additional_engineering_changes: document.getElementById('additional_engineering_changes').value,
+        additional_engineering_changes_date: document.getElementById('additional_engineering_changes_date').value,
+        shown_on_drawing_no: document.getElementById('shown_on_drawing_no').value,
+        purchase_order_no: document.getElementById('purchase_order_no').value,
+        weight_kg: document.getElementById('weight_kg').value,
+        checking_aid_no: document.getElementById('checking_aid_no').value,
+        process_engineering_change_level: document.getElementById('process_engineering_change_level').value,
+        process_engineering_change_date: document.getElementById('process_engineering_change_date').value,
+        // Step 2
+        supplier_name: document.getElementById('supplier_name').value,
+        supplier_code: document.getElementById('supplier_code').value,
+        street_address: document.getElementById('street_address').value,
+        city: document.getElementById('city').value,
+        state: document.getElementById('state').value,
+        zip: document.getElementById('zip').value,
+        customer_name_division: document.getElementById('customer_name_division').value,
+        buyer_buyer_code: document.getElementById('buyer_buyer_code').value,
+        application: document.getElementById('application').value,
+        submission_information: Array.from(document.querySelectorAll('input[name="submission_information[]"]:checked')).map(cb => cb.value),
+        contains_prohibited_substances: document.querySelector('input[name="contains_prohibited_substances"]:checked')?.value === '1',
+        plastic_has_iso_marking: document.querySelector('input[name="plastic_has_iso_marking"]:checked')?.value === '1',
+        // Step 3
+        reason_for_submission: Array.from(document.querySelectorAll('input[name="reason_for_submission[]"]:checked')).map(cb => cb.value),
+        // REMOVED: reason_other_text - column dropped from database
+        // reason_other_text: document.getElementById('reason_other_text').value,
+        submission_results: Array.from(document.querySelectorAll('input[name="submission_results[]"]:checked')).map(cb => cb.value),
+        meets_all_requirements: document.querySelector('input[name="meets_all_requirements"]:checked')?.value === '1',
+        explanation_if_not_meet: document.getElementById('explanation_if_not_meet').value,
+        // Step 4
+        explanation_comments: document.getElementById('explanation_comments').value,
+        print_name: document.getElementById('print_name').value,
+        title: document.getElementById('title').value,
+        phone_no: document.getElementById('phone_no').value,
+        fax_no: document.getElementById('fax_no').value,
+        signature_date: document.getElementById('signature_date').value
     };
 }
 
 // ===== AUTO-SAVE SETUP =====
 let autoSaveTimer = null;
 function setupAutoSave() {
-    const formInputs = document.querySelectorAll('#isForm input, #isForm textarea, #isForm select');
+    const formInputs = document.querySelectorAll('#pswForm input, #pswForm textarea, #pswForm select');
     
     formInputs.forEach(input => {
         input.addEventListener('change', () => {
@@ -525,7 +608,7 @@ function saveDraft(silent = false) {
     const formData = collectFormData();
     formData.status = 'DRAFT';
     
-    fetch(`/api/psw/${window.partSubmissionWarrantId}/draft`, {
+    fetch(`/api/part-submission-warrants/${window.partSubmissionWarrantId}/draft`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -550,13 +633,13 @@ function saveDraft(silent = false) {
 
 function validate() {
     const required = [
-        {id: 'model', label: 'Model'},
-        {id: 'date_issued', label: 'Date of Issued'},
-        {id: 'ref_no', label: 'Ref. No'},
-        {id: 'part_no', label: 'Part No'},
         {id: 'part_name', label: 'Part Name'},
-        {id: 'manufacturer', label: 'Manufacturer'},
-        {id: 'material', label: 'Material'}
+        {id: 'part_number', label: 'Part Number'},
+        {id: 'supplier_name', label: 'Supplier Name'},
+        {id: 'supplier_code', label: 'Supplier Code'},
+        {id: 'print_name', label: 'Print Name'},
+        {id: 'title', label: 'Title'},
+        {id: 'signature_date', label: 'Signature Date'}
     ];
     
     for (const field of required) {
@@ -568,29 +651,24 @@ function validate() {
         }
     }
     
-    if (window.drawings.length === 0) {
-        Swal.fire('Validation Error', 'At least one drawing is required', 'warning');
+    // Validate radio buttons
+    if (!document.querySelector('input[name="safety_government_regulation"]:checked')) {
+        Swal.fire('Validation Error', 'Safety and/or Government Regulation selection is required', 'warning');
         return false;
     }
     
-    if (window.inspectionItems.length === 0) {
-        Swal.fire('Validation Error', 'At least one inspection item is required', 'warning');
+    if (!document.querySelector('input[name="meets_all_requirements"]:checked')) {
+        Swal.fire('Validation Error', 'Meets All Requirements selection is required', 'warning');
         return false;
     }
     
-    // Validate inspection items
-    for (let i = 0; i < window.inspectionItems.length; i++) {
-        const item = window.inspectionItems[i];
-        if (!item.inspection_item) {
-            Swal.fire('Validation Error', `Inspection Item #${i + 1}: Item description is required`, 'warning');
-            return false;
-        }
-        if (!item.inspection_criterion) {
-            Swal.fire('Validation Error', `Inspection Item #${i + 1}: Inspection criterion is required`, 'warning');
-            return false;
-        }
-        if (!item.rank) {
-            Swal.fire('Validation Error', `Inspection Item #${i + 1}: Rank is required`, 'warning');
+    // Validate explanation if "No" is selected for meets_all_requirements
+    const meetsAllRequirements = document.querySelector('input[name="meets_all_requirements"]:checked');
+    if (meetsAllRequirements && meetsAllRequirements.value === '0') {
+        const explanation = document.getElementById('explanation_if_not_meet');
+        if (!explanation.value.trim()) {
+            Swal.fire('Validation Error', 'Explanation is required when results do not meet all requirements', 'warning');
+            explanation.focus();
             return false;
         }
     }
@@ -609,7 +687,29 @@ function submitForm() {
     const formData = collectFormData();
     formData.status = 'SUBMITTED';
     
-    fetch(`/api/psw/${window.partSubmissionWarrantId}/submit`, {
+    // DEBUG: Log checkbox data
+    console.log('📦 PSW SUBMIT - Full Form Data:', formData);
+    console.log('📋 PSW SUBMIT - Checkbox Data:', {
+        submission_information: formData.submission_information,
+        submission_info_count: formData.submission_information?.length || 0,
+        reason_for_submission: formData.reason_for_submission,
+        reason_count: formData.reason_for_submission?.length || 0,
+        submission_results: formData.submission_results,
+        results_count: formData.submission_results?.length || 0
+    });
+    
+    // ALERT if checkboxes are empty
+    if (!formData.submission_information || formData.submission_information.length === 0) {
+        console.warn('⚠️  WARNING: submission_information is empty!');
+    }
+    if (!formData.reason_for_submission || formData.reason_for_submission.length === 0) {
+        console.warn('⚠️  WARNING: reason_for_submission is empty!');
+    }
+    if (!formData.submission_results || formData.submission_results.length === 0) {
+        console.warn('⚠️  WARNING: submission_results is empty!');
+    }
+    
+    fetch(`/api/part-submission-warrants/${window.partSubmissionWarrantId}/submit`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -638,9 +738,34 @@ function submitForm() {
     });
 }
 
+// ===== TOGGLE EXPLANATION FIELD =====
+function setupMeetsAllRequirementsToggle() {
+    const meetsYes = document.getElementById('meets_yes');
+    const meetsNo = document.getElementById('meets_no');
+    const explanationContainer = document.getElementById('explanation_if_not_meet_container');
+    
+    if (meetsYes) {
+        meetsYes.addEventListener('change', function() {
+            if (this.checked) {
+                explanationContainer.style.display = 'none';
+                document.getElementById('explanation_if_not_meet').value = ''; // Clear explanation
+            }
+        });
+    }
+    
+    if (meetsNo) {
+        meetsNo.addEventListener('change', function() {
+            if (this.checked) {
+                explanationContainer.style.display = 'block';
+            }
+        });
+    }
+}
+
 // ===== PAGE LOAD =====
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📄 DOM Content Loaded');
+    setupMeetsAllRequirementsToggle();
     initializeForm();
 });
 </script>

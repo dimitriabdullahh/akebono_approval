@@ -20,6 +20,22 @@ class InspectionStandardPdfGenerator
                 'inspection_standard_id' => $inspectionStandard->id
             ]);
 
+            // Delete old PDF if exists
+            if ($inspectionStandard->pdf_file_path) {
+                try {
+                    if (Storage::disk('documents')->exists($inspectionStandard->pdf_file_path)) {
+                        Storage::disk('documents')->delete($inspectionStandard->pdf_file_path);
+                        Log::info('[PDF Generator] Old PDF deleted', [
+                            'old_path' => $inspectionStandard->pdf_file_path
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('[PDF Generator] Failed to delete old PDF', [
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
             // Ensure all relations are loaded
             if (!$inspectionStandard->relationLoaded('drawings')) {
                 $inspectionStandard->load('drawings');
@@ -95,8 +111,14 @@ class InspectionStandardPdfGenerator
             if (!$inspectionStandard->relationLoaded('supplier')) {
                 $inspectionStandard->load('supplier');
             }
+            if (!$inspectionStandard->relationLoaded('requestDocument')) {
+                $inspectionStandard->load('requestDocument');
+            }
 
             Log::info('[PDF Generator] Preparing data...');
+
+            // Generate QR codes for digital signatures
+            $qrCodes = $this->generateSignatureQRCodes($inspectionStandard);
 
             $data = [
                 'inspectionStandard' => $inspectionStandard,
@@ -124,8 +146,18 @@ class InspectionStandardPdfGenerator
                     ->map(function($d) {
                         $filePath = null;
                         try {
-                            if ($d->file_path && Storage::disk('documents')->exists($d->file_path)) {
-                                $filePath = Storage::disk('documents')->path($d->file_path);
+                            if (!empty($d->file_path) && Storage::disk('documents')->exists($d->file_path)) {
+                                $fullPath = Storage::disk('documents')->path($d->file_path);
+                                // Verify it's a file, not a directory
+                                if (is_file($fullPath)) {
+                                    $filePath = $fullPath;
+                                } else {
+                                    Log::warning('[PDF Generator] Drawing path is not a file', [
+                                        'drawing_id' => $d->id,
+                                        'path' => $d->file_path,
+                                        'full_path' => $fullPath
+                                    ]);
+                                }
                             }
                         } catch (\Exception $e) {
                             Log::warning('[PDF Generator] Error getting drawing file path', [
@@ -134,10 +166,13 @@ class InspectionStandardPdfGenerator
                             ]);
                         }
 
+                        // Extract revision to variable to avoid parse error
+                        $rev = $d->revision ?? '';
+
                         return [
                             'drawingName' => $d->drawing_name ?? '',
                             'drawingNo' => $d->drawing_no ?? '',
-                            'revision' => $d->revision ?? '',
+                            'revision' => $rev,
                             'description' => $d->description ?? '',
                             'filePath' => $filePath,
                             'fileType' => $d->file_type ?? '',
@@ -161,13 +196,16 @@ class InspectionStandardPdfGenerator
                     })
                     ->values() // Reset array keys
                     ->toArray(),
+                'revisions' => [], // Add empty revisions array for now
+                'qrCodes' => $qrCodes, // Add QR codes to data
                 'generatedAt' => Carbon::now()->format('d M Y H:i:s'),
                 'pageNumber' => 1,
             ];
 
             Log::info('[PDF Generator] Data prepared successfully', [
                 'drawings_count' => count($data['drawings']),
-                'items_count' => count($data['inspectionItems'])
+                'items_count' => count($data['inspectionItems']),
+                'qr_codes' => array_keys($qrCodes),
             ]);
 
             return $data;
@@ -178,6 +216,62 @@ class InspectionStandardPdfGenerator
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Generate QR codes for digital signatures
+     *
+     * @param InspectionStandard $inspectionStandard
+     * @return array
+     */
+    private function generateSignatureQRCodes(InspectionStandard $inspectionStandard): array
+    {
+        $qrCodes = [];
+        $qrService = app(\App\Services\QRCodeService::class);
+        
+        try {
+            $requestDocument = $inspectionStandard->requestDocument;
+            
+            if (!$requestDocument) {
+                return $qrCodes;
+            }
+
+            // Receiver QR Code (for IS only)
+            if ($requestDocument->receiver_esign_token) {
+                $signature = \App\Models\CheckerSignature::where('token', $requestDocument->receiver_esign_token)->first();
+                if ($signature) {
+                    $qrCodes['receiver'] = $qrService->generateForSignature($signature);
+                    Log::info('[PDF Generator] Receiver QR code generated');
+                }
+            }
+
+            // Checker QR Code
+            if ($requestDocument->checker_esign_token) {
+                $signature = \App\Models\CheckerSignature::where('token', $requestDocument->checker_esign_token)->first();
+                if ($signature) {
+                    $qrCodes['checker'] = $qrService->generateForSignature($signature);
+                    Log::info('[PDF Generator] Checker QR code generated');
+                }
+            }
+
+            // Approver QR Codes (from document_approvals)
+            $approvals = $requestDocument->approvals()->where('status', 'APPROVED')->get();
+            foreach ($approvals as $approval) {
+                if ($approval->signature) {
+                    $scope = strtolower($approval->scope);
+                    $qrCodes["approver_{$scope}"] = $qrService->generateForSignature($approval->signature);
+                    Log::info('[PDF Generator] Approver QR code generated', ['scope' => $scope]);
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('[PDF Generator] Error generating QR codes', [
+                'error' => $e->getMessage()
+            ]);
+            // Continue without QR codes rather than failing the entire PDF generation
+        }
+
+        return $qrCodes;
     }
 
     /**

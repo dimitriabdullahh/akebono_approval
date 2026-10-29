@@ -11,18 +11,21 @@ class DocumentRequest extends Model
 
     protected $fillable = [
         'supplier_id',
+        'category',
         'model',
         'due_date',
         'access_token',
         'created_by',
         'alert_dismissed_at',
         'documents_submitted_notified_at',
+        'sent_to_akebono_at',
     ];
 
     protected $dates = [
         'due_date',
         'alert_dismissed_at',
         'documents_submitted_notified_at',
+        'sent_to_akebono_at',
         'created_at',
         'updated_at',
     ];
@@ -68,11 +71,45 @@ class DocumentRequest extends Model
     }
 
     /**
-     * Relasi: User yang membuat request
+     * Relasi: User yang membuat request (legacy system)
+     * Note: created_by might be NPK string (employee) or user_id (integer)
+     * Use creatorUser or creatorEmployee accessors instead
      */
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get creator name (works for both User and Employee)
+     */
+    public function getCreatorNameAttribute()
+    {
+        // Check if created_by is numeric (User ID)
+        if (is_numeric($this->created_by)) {
+            $user = User::find($this->created_by);
+            return $user ? $user->name : 'Unknown';
+        }
+        
+        // Otherwise it's NPK (Employee)
+        $employee = Employee::where('npk', $this->created_by)->first();
+        return $employee ? $employee->name : $this->created_by;
+    }
+
+    /**
+     * Get creator role/division
+     */
+    public function getCreatorRoleAttribute()
+    {
+        // Check if created_by is numeric (User ID)
+        if (is_numeric($this->created_by)) {
+            $user = User::find($this->created_by);
+            return $user ? $user->role : 'Unknown';
+        }
+        
+        // Otherwise it's NPK (Employee)
+        $employee = Employee::where('npk', $this->created_by)->first();
+        return $employee ? "{$employee->division} - {$employee->role}" : 'Unknown';
     }
 
     /**

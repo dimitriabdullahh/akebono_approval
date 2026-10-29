@@ -15,6 +15,7 @@ class DocumentType extends Model
         'is_mandatory',
         'scope',
         'description',
+        'order',
     ];
 
     protected $casts = [

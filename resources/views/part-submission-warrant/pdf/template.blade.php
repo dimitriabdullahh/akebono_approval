@@ -1,381 +1,298 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Part Submission Warrant - {{ $formData['generalInformation']['partNumber'] ?? 'N/A' }}</title>
-    <style>
-        @page {
-            size: A4 portrait;
-            margin: 6mm 6mm 6mm 6mm;
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-        }
-        body {
-            font-family: 'Times New Roman', serif;
-            font-size: 11px;
-            line-height: 1.3;
-            color: #000 !important;
-            background: white;
-        }
-        td, th, p, div, span {
-            color: #000 !important;
-        }
-        .page {
-            page-break-after: always;
-            padding: 0;
-            margin: 0;
-            background: white;
-            min-height: 277mm;
-        }
-        .page:last-child {
-            page-break-after: avoid;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 0;
-            padding: 0;
-        }
-        table td, table th {
-            border: 1px solid #333;
-            padding: 4px 5px;
-            vertical-align: top;
-            font-size: 10px;
-            line-height: 1.2;
-        }
-        .no-border { border: none !important; }
-        .bold { font-weight: bold; }
-        .center { text-align: center; }
-        .left { text-align: left; }
-        .right { text-align: right; }
+<meta charset="UTF-8">
+<title>Part Submission Warrant (PSW)</title>
+<style>
+    @page { size: 612pt 792pt; margin: 0; }
+    * { margin: 0; padding: 0; }
+    html, body { margin: 0; padding: 0; background: #fff; color: #000; }
+    body { font-family: times, "Times New Roman", serif; font-size: 9.4pt; }
 
-        /* HEADER */
-        .header {
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        .header h1 {
-            font-size: 20px;
-            font-weight: bold;
-            margin: 0 0 5px 0;
-            padding: 0;
-        }
-        .header p {
-            font-size: 11px;
-            margin: 0;
-            padding: 0;
-        }
+    /*
+     * PSW - DOMPDF MASTER (v3)
+     * Dibuat ulang dari koordinat PDF referensi "11. Part Submission Warrant (PSW)":
+     * Letter 612 x 792 pt; semua elemen absolut (x/y dalam pt dari pojok kiri-atas halaman),
+     * sehingga isi database yang panjang tidak menggeser elemen lain.
+     *
+     * v3: QR code Supplier Authorized Signature diletakkan tepat di atas garis tanda tangan.
+     */
+    .page { position: relative; width: 612pt; height: 791pt; overflow: hidden; }
 
-        /* SECTION TITLE */
-        .section-title {
-            font-weight: bold;
-            font-size: 12px;
-            background-color: #f0f0f0;
-            padding: 6px 5px;
-            margin-top: 8px;
-            margin-bottom: 4px;
-        }
+    .t { position: absolute; white-space: pre; line-height: 11pt; height: 11pt; color: #000; }
+    .t.t  { font-family: times, "Times New Roman", serif; font-weight: normal; }
+    .t.tb { font-family: times, "Times New Roman", serif; font-weight: bold; }
+    .t.hb { font-family: helvetica, arial, sans-serif; font-weight: bold; }
+    .s94  { font-size: 9.4pt; }
+    .s104 { font-size: 10.4pt; }
+    .s113 { font-size: 11.3pt; }
+    .hb  { transform: scale(0.870, 1); transform-origin: 0 0; }
+    .s76  { font-size: 7.6pt; }
 
-        /* FORM TABLE */
-        .form-table {
-            width: 100%;
-            margin-bottom: 8px;
-        }
-        .form-table td {
-            padding: 6px 5px;
-            font-size: 10px;
-            border: 1px solid #999;
-        }
-        .form-table .label {
-            width: 30%;
-            font-weight: bold;
-            background-color: #f9f9f9;
-        }
-        .form-table .value {
-            width: 70%;
-        }
+    .frame   { position: absolute; left: 67.8pt; top: 45.5pt; width: 503.5pt; height: 710.75pt; border: 0.75pt solid #000; }
+    .divider { position: absolute; left: 67.8pt; top: 642pt; width: 505pt; height: 1pt; background: #000; }
 
-        /* CHECKBOX ITEMS */
-        .checkbox-group {
-            margin: 4px 0;
-        }
-        .checkbox-item {
-            margin: 3px 0;
-            font-size: 10px;
-        }
-        .checkbox-item:before {
-            content: "☐ ";
-            margin-right: 5px;
-        }
-        .checkbox-item.checked:before {
-            content: "☑ ";
-            margin-right: 5px;
-        }
+    .ln { position: absolute; height: 0; border-top: 0.5pt solid #000; }
 
-        /* SIGNATURE SECTION */
-        .signature-section {
-            margin-top: 15px;
-        }
-        .signature-table {
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        .signature-table td {
-            text-align: center;
-            height: 60px;
-            padding: 8px 5px;
-            font-size: 10px;
-            border: 1px solid #333;
-        }
-        .signature-section-header {
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 8px;
-            font-size: 11px;
-        }
+    .v { position: absolute; height: 9pt; line-height: 9pt; overflow: hidden; white-space: nowrap;
+         font-family: "DejaVu Sans", arial, sans-serif; font-size: 7.4pt; color: #000; }
 
-        /* PAGE BREAK */
-        .page-break {
-            page-break-after: always;
-        }
+    .cb { position: absolute; width: 3.7pt; height: 4.8pt; border: 0.5pt solid #000; }
+    .ck { position: absolute; width: 8pt; height: 8pt; line-height: 8pt; text-align: center;
+          font-family: "DejaVu Sans", sans-serif; font-size: 7.5pt; font-weight: bold; }
 
-        /* APPROVAL INDICATOR */
-        .approval-status {
-            margin-top: 10px;
-            padding: 8px;
-            border: 2px solid #333;
-            text-align: center;
-            font-weight: bold;
-        }
-    </style>
+    /* QR code tanda tangan: centered di atas garis signature */
+    .qr-sign { position: absolute; left: 247pt; top: 595pt; width: 38pt; height: 38pt; }
+    .qr-sign img { width: 38pt; height: 38pt; display: block; }
+</style>
 </head>
 <body>
-    <div class="page">
-        <!-- HEADER -->
-        <div class="header">
-            <h1>PART SUBMISSION WARRANT (PSW)</h1>
-            <p>PT Akebono Manufacturing Indonesia</p>
+@php
+    $general = $formData['generalInformation'] ?? [];
+    $supplier = $formData['supplierSubmissionInfo'] ?? [];
+    $reason = $formData['reasonResults'] ?? [];
+    $declaration = $formData['declaration'] ?? [];
+    $internal = $formData['internalAkebono'] ?? [];
+
+    $decode = function ($value) {
+        if (is_array($value)) {
+            return $value;
+        }
+        $decoded = json_decode($value ?? '[]', true);
+        return is_array($decoded) ? $decoded : [];
+    };
+
+    $submissionInfo = $decode($psw->submission_information ?? '[]');
+    $reasonSubmission = $decode($psw->reason_for_submission ?? '[]');
+    $submissionResults = $decode($psw->submission_results ?? '[]');
+
+    $has = function ($array, $key, $aliases = []) {
+        foreach (array_merge([$key], $aliases) as $item) {
+            if (in_array($item, $array, true)) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    $customerDecision = strtolower(trim(
+        (string) ($internal['decision'] ?? $psw->status ?? '')
+    ));
+@endphp
+
+<div class="page">
+
+    <!-- FRAME -->
+    <div class="frame"></div>
+    <div class="divider"></div>
+
+    <!-- LABEL / TEKS STATIS -->
+    <div class="t hb s113" style="left:81.00pt; top:33.42pt;">PT. AKEBONO BRAKE ASTRA INDONESIA</div>
+    <div class="t tb s113" style="left:404.32pt; top:33.54pt;">Part Submission Warrant (PSW)</div>
+    <div class="t t s104" style="left:81.00pt; top:58.13pt;">Part</div>
+    <div class="t t s94" style="left:100.44pt; top:58.15pt;">Name</div>
+    <div class="t t s94" style="left:364.69pt; top:58.15pt;">Part Number</div>
+    <div class="t t s94" style="left:81.00pt; top:80.23pt;">Safety and/or</div>
+    <div class="t t s94" style="left:81.24pt; top:91.75pt;">Government Regulation</div>
+    <div class="t t s94" style="left:207.03pt; top:91.75pt;">Yes</div>
+    <div class="t t s94" style="left:240.87pt; top:91.75pt;">No</div>
+    <div class="t t s94" style="left:271.67pt; top:91.75pt;">Engineering Drawing Change Level</div>
+    <div class="t t s94" style="left:479.07pt; top:91.75pt;">Dated</div>
+    <div class="t t s94" style="left:81.00pt; top:113.35pt;">Additional Engineering Changes</div>
+    <div class="t t s94" style="left:479.05pt; top:113.35pt;">Dated</div>
+    <div class="t t s94" style="left:81.00pt; top:135.07pt;">Shown on Drawing No.</div>
+    <div class="t t s94" style="left:260.94pt; top:135.07pt;">Purchase Order No.</div>
+    <div class="t t s94" style="left:428.13pt; top:135.07pt;">Weight (kg)</div>
+    <div class="t t s94" style="left:81.00pt; top:156.79pt;">Checking Aid No.</div>
+    <div class="t t s94" style="left:238.29pt; top:156.79pt;">Process or Engineering Change Level</div>
+    <div class="t t s94" style="left:478.95pt; top:156.79pt;">Dated</div>
+    <div class="t tb s94" style="left:81.00pt; top:179.47pt;">SUPPLIER MANUFACTURING INFORMATION</div>
+    <div class="t tb s94" style="left:326.76pt; top:179.47pt;">SUBMISSION INFORMATION</div>
+    <div class="t t s94" style="left:332.88pt; top:201.79pt;">Dimensional</div>
+    <div class="t t s94" style="left:398.61pt; top:201.79pt;">Materials/Functional</div>
+    <div class="t t s94" style="left:496.80pt; top:201.79pt;">Appearance</div>
+    <div class="t t s94" style="left:326.73pt; top:218.47pt;">Customer Name/Division</div>
+    <div class="t t s94" style="left:326.55pt; top:234.67pt;">Buyer/Buyer Code</div>
+    <div class="t t s94" style="left:326.73pt; top:250.87pt;">Application</div>
+    <div class="t t s94" style="left:81.00pt; top:277.99pt;">City</div>
+    <div class="t t s94" style="left:198.28pt; top:277.99pt;">State</div>
+    <div class="t t s94" style="left:285.00pt; top:277.99pt;">Zip</div>
+    <div class="t t s94" style="left:82.44pt; top:300.31pt;">Note:</div>
+    <div class="t t s94" style="left:109.96pt; top:300.31pt;">Does this part contain any restricted or reportable substances?</div>
+    <div class="t t s94" style="left:438.87pt; top:300.31pt;">Yes</div>
+    <div class="t t s94" style="left:489.69pt; top:300.31pt;">No</div>
+    <div class="t t s94" style="left:109.96pt; top:311.95pt;">Are plastic parts identified with appropriate ISO marking codes?</div>
+    <div class="t t s94" style="left:438.81pt; top:311.95pt;">Yes</div>
+    <div class="t t s94" style="left:489.69pt; top:311.95pt;">No</div>
+    <div class="t tb s104" style="left:80.28pt; top:335.33pt;">REASON FOR SUBMISSION</div>
+    <div class="t t s94" style="left:90.69pt; top:347.11pt;">Initial Submission</div>
+    <div class="t t s94" style="left:387.96pt; top:347.11pt;">Change to Optional Construction or Material</div>
+    <div class="t t s94" style="left:90.69pt; top:358.75pt;">Engineering Change(s)</div>
+    <div class="t t s94" style="left:387.96pt; top:358.75pt;">Sub-Supplier or Material Source Change</div>
+    <div class="t t s94" style="left:90.69pt; top:370.27pt;">Tooling: Transfer, Replacement, Refurbishment, or additional</div>
+    <div class="t t s94" style="left:387.96pt; top:370.27pt;">Change in Part Processing</div>
+    <div class="t t s94" style="left:90.69pt; top:381.79pt;">Correction of Discrepancy</div>
+    <div class="t t s94" style="left:387.96pt; top:381.79pt;">Parts Produced at Additional Location</div>
+    <div class="t t s94" style="left:90.69pt; top:393.31pt;">Tooling inactive &gt; than 1 year</div>
+    <div class="t t s94" style="left:387.96pt; top:393.31pt;">Other - please specify</div>
+    <div class="t tb s104" style="left:81.00pt; top:416.93pt;">SUBMISSION RESULTS</div>
+    <div class="t t s94" style="left:81.00pt; top:434.59pt;">The results for</div>
+    <div class="t t s94" style="left:182.13pt; top:434.59pt;">dimensional measurements</div>
+    <div class="t t s94" style="left:354.45pt; top:434.59pt;">material and functional tests</div>
+    <div class="t t s94" style="left:182.13pt; top:446.11pt;">appearance criteria</div>
+    <div class="t t s94" style="left:354.45pt; top:446.11pt;">statistical process evaluation</div>
+    <div class="t t s94" style="left:81.00pt; top:468.55pt;">These results meet all drawing and specification requirements:</div>
+    <div class="t t s94" style="left:354.45pt; top:468.55pt;">Yes</div>
+    <div class="t t s94" style="left:411.03pt; top:468.55pt;">No (if "No" - Explanation Required)</div>
+    <div class="t tb s104" style="left:81.00pt; top:492.05pt;">DECLARATION</div>
+    <div class="t t s94" style="left:81.00pt; top:503.23pt;">I hereby affirm that the samples represented by this warrant are representative of our parts, and have been made to the</div>
+    <div class="t t s94" style="left:81.00pt; top:514.03pt;">applicable</div>
+    <div class="t t s94" style="left:81.00pt; top:524.95pt;">Customer drawings and specification and are made from specified materials on regular production tooling, regular</div>
+    <div class="t t s94" style="left:81.00pt; top:535.75pt;">production process. I have noted any deviations from this declaration below :</div>
+    <div class="t t s104" style="left:81.00pt; top:558.05pt;">EXPLANATION/COMMENTS:</div>
+    <div class="t t s94" style="left:81.00pt; top:581.23pt;">Print Name</div>
+    <div class="t t s94" style="left:218.28pt; top:581.23pt;">Title</div>
+    <div class="t t s94" style="left:327.70pt; top:581.23pt;">Phone No.</div>
+    <div class="t t s94" style="left:445.09pt; top:581.23pt;">Fax No.</div>
+    <div class="t t s94" style="left:81.00pt; top:624.43pt;">Supplier Authorized Signature</div>
+    <div class="t t s94" style="left:339.45pt; top:624.43pt;">Date</div>
+    <div class="t tb s104" style="left:216.60pt; top:648.05pt;">FOR CUSTOMER USE ONLY (IF APPLICABLE)</div>
+    <div class="t t s94" style="left:90.51pt; top:671.83pt;">Approved</div>
+    <div class="t t s94" style="left:199.23pt; top:671.83pt;">Interim Approved</div>
+    <div class="t t s94" style="left:340.47pt; top:671.83pt;">Rejected</div>
+    <div class="t t s94" style="left:81.00pt; top:742.15pt;">Authorized Signature (QA Manager)</div>
+    <div class="t t s94" style="left:249.50pt; top:742.15pt;">Authorized Signature&nbsp; (Purchasing Manager)</div>
+    <div class="t t s94" style="left:445.03pt; top:742.15pt;">Date :</div>
+    <div class="t t s76" style="left:82.80pt; top:211.04pt;">Supplier Name &amp; Supplier Code</div>
+    <div class="t t s76" style="left:83.40pt; top:243.68pt;">Street Address</div>
+
+    <!-- GARIS ISIAN -->
+    <div class="ln" style="left:125.00pt; top:68.25pt; width:192.80pt;"></div>
+    <div class="ln" style="left:415.50pt; top:68.25pt; width:131.50pt;"></div>
+    <div class="ln" style="left:410.20pt; top:101.75pt; width:47.00pt;"></div>
+    <div class="ln" style="left:503.80pt; top:101.75pt; width:52.00pt;"></div>
+    <div class="ln" style="left:206.50pt; top:123.50pt; width:193.00pt;"></div>
+    <div class="ln" style="left:503.80pt; top:123.50pt; width:51.70pt;"></div>
+    <div class="ln" style="left:172.80pt; top:145.25pt; width:80.00pt;"></div>
+    <div class="ln" style="left:337.80pt; top:145.25pt; width:84.70pt;"></div>
+    <div class="ln" style="left:476.00pt; top:145.25pt; width:80.00pt;"></div>
+    <div class="ln" style="left:161.50pt; top:166.75pt; width:70.50pt;"></div>
+    <div class="ln" style="left:382.80pt; top:166.75pt; width:89.20pt;"></div>
+    <div class="ln" style="left:518.00pt; top:166.75pt; width:37.50pt;"></div>
+    <div class="ln" style="left:81.00pt; top:211.75pt; width:211.80pt;"></div>
+    <div class="ln" style="left:425.50pt; top:228.50pt; width:131.50pt;"></div>
+    <div class="ln" style="left:81.80pt; top:244.75pt; width:211.70pt;"></div>
+    <div class="ln" style="left:399.80pt; top:244.75pt; width:155.20pt;"></div>
+    <div class="ln" style="left:373.50pt; top:261.00pt; width:183.50pt;"></div>
+    <div class="ln" style="left:81.00pt; top:277.25pt; width:110.00pt;"></div>
+    <div class="ln" style="left:199.80pt; top:277.25pt; width:80.00pt;"></div>
+    <div class="ln" style="left:285.00pt; top:277.25pt; width:75.00pt;"></div>
+    <div class="ln" style="left:220.80pt; top:568.50pt; width:331.20pt;"></div>
+    <div class="ln" style="left:126.20pt; top:591.25pt; width:84.80pt;"></div>
+    <div class="ln" style="left:238.20pt; top:591.25pt; width:84.80pt;"></div>
+    <div class="ln" style="left:369.80pt; top:591.25pt; width:70.40pt;"></div>
+    <div class="ln" style="left:477.80pt; top:591.25pt; width:75.20pt;"></div>
+    <div class="ln" style="left:198.20pt; top:634.50pt; width:136.30pt;"></div>
+    <div class="ln" style="left:359.50pt; top:634.50pt; width:89.50pt;"></div>
+    <div class="ln" style="left:81.00pt; top:741.25pt; width:134.50pt;"></div>
+    <div class="ln" style="left:249.80pt; top:741.25pt; width:165.40pt;"></div>
+    <div class="ln" style="left:470.00pt; top:752.25pt; width:52.00pt;"></div>
+
+    <!-- NILAI ISIAN (dari database) -->
+    <div class="v" style="left:126.50pt; top:57.95pt; width:190.80pt;">{{ $general['partName'] ?? '' }}</div>
+    <div class="v" style="left:417.00pt; top:57.95pt; width:148.50pt;">{{ $general['partNumber'] ?? '' }}</div>
+    <div class="v" style="left:411.70pt; top:91.45pt; width:45.00pt;">{{ $general['engineeringDrawingChangeLevel'] ?? '' }}</div>
+    <div class="v" style="left:505.30pt; top:91.45pt; width:60.20pt;">{{ $general['engineeringDrawingChangeDate'] ?? '' }}</div>
+    <div class="v" style="left:208.00pt; top:113.20pt; width:191.00pt;">{{ $general['additionalEngineeringChanges'] ?? '' }}</div>
+    <div class="v" style="left:505.30pt; top:113.20pt; width:60.20pt;">{{ $general['additionalEngineeringChangesDate'] ?? '' }}</div>
+    <div class="v" style="left:174.30pt; top:134.95pt; width:78.00pt;">{{ $general['shownOnDrawingNo'] ?? '' }}</div>
+    <div class="v" style="left:339.30pt; top:134.95pt; width:82.70pt;">{{ $general['purchaseOrderNo'] ?? '' }}</div>
+    <div class="v" style="left:477.50pt; top:134.95pt; width:88.00pt;">{{ $general['weightKg'] ?? '' }}</div>
+    <div class="v" style="left:163.00pt; top:156.45pt; width:68.50pt;">{{ $general['checkingAidNo'] ?? '' }}</div>
+    <div class="v" style="left:384.30pt; top:156.45pt; width:87.20pt;">{{ $general['processEngineeringChangeLevel'] ?? '' }}</div>
+    <div class="v" style="left:519.50pt; top:156.45pt; width:46.00pt;">{{ $general['processEngineeringChangeDate'] ?? '' }}</div>
+    <div class="v" style="left:82.50pt; top:201.45pt; width:209.80pt;">{{ trim(($supplier['supplierName'] ?? '') . (!empty($supplier['supplierCode']) ? ' / ' . $supplier['supplierCode'] : '')) }}</div>
+    <div class="v" style="left:427.00pt; top:218.20pt; width:138.50pt;">{{ $supplier['customerNameDivision'] ?? '' }}</div>
+    <div class="v" style="left:83.30pt; top:234.45pt; width:209.70pt;">{{ $supplier['streetAddress'] ?? '' }}</div>
+    <div class="v" style="left:401.30pt; top:234.45pt; width:164.20pt;">{{ $supplier['buyerBuyerCode'] ?? '' }}</div>
+    <div class="v" style="left:375.00pt; top:250.70pt; width:190.50pt;">{{ $supplier['application'] ?? '' }}</div>
+    <div class="v" style="left:82.50pt; top:266.95pt; width:108.00pt;">{{ $supplier['city'] ?? '' }}</div>
+    <div class="v" style="left:200.50pt; top:266.95pt; width:78.00pt;">{{ $supplier['state'] ?? '' }}</div>
+    <div class="v" style="left:285.50pt; top:266.95pt; width:73.00pt;">{{ $supplier['zip'] ?? '' }}</div>
+    <div class="v" style="left:222.30pt; top:558.20pt; width:343.20pt;">{{ $declaration['explanationComments'] ?? '' }}</div>
+    <div class="v" style="left:127.70pt; top:580.95pt; width:82.80pt;">{{ $declaration['printName'] ?? '' }}</div>
+    <div class="v" style="left:239.70pt; top:580.95pt; width:82.80pt;">{{ $declaration['title'] ?? '' }}</div>
+    <div class="v" style="left:371.30pt; top:580.95pt; width:68.40pt;">{{ $declaration['phoneNo'] ?? '' }}</div>
+    <div class="v" style="left:479.30pt; top:580.95pt; width:86.20pt;">{{ $declaration['faxNo'] ?? '' }}</div>
+
+    {{-- QR CODE: tepat di atas garis Supplier Authorized Signature --}}
+    @if(!empty($declaration['signatureQrData']))
+        <div class="qr-sign">
+            <img src="{{ $declaration['signatureQrData'] }}" alt="QR">
         </div>
+    @endif
 
-        <!-- STEP 1: PART INFORMATION & ENGINEERING CHANGES -->
-        <div class="section-title">1. PART INFORMATION & ENGINEERING CHANGES</div>
-        
-        <table class="form-table">
-            <tr>
-                <td class="label">Part Name</td>
-                <td class="value">{{ $formData['generalInformation']['partName'] ?? '_______________' }}</td>
-                <td class="label">Part Number</td>
-                <td class="value">{{ $formData['generalInformation']['partNumber'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Safety / Government Regulation</td>
-                <td class="value">{{ $formData['generalInformation']['safetyGovernmentRegulation'] ? '☑ Yes' : '☐ No' }}</td>
-                <td class="label">Engineering Drawing Change Level</td>
-                <td class="value">{{ $formData['generalInformation']['engineeringDrawingChangeLevel'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Engineering Drawing Change Date</td>
-                <td class="value">{{ $formData['generalInformation']['engineeringDrawingChangeDate'] ?? '_______________' }}</td>
-                <td class="label">Additional Engineering Changes</td>
-                <td class="value">{{ $formData['generalInformation']['additionalEngineeringChanges'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Additional Engineering Changes Date</td>
-                <td class="value">{{ $formData['generalInformation']['additionalEngineeringChangesDate'] ?? '_______________' }}</td>
-                <td class="label">Shown on Drawing No.</td>
-                <td class="value">{{ $formData['generalInformation']['shownOnDrawingNo'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Purchase Order No.</td>
-                <td class="value">{{ $formData['generalInformation']['purchaseOrderNo'] ?? '_______________' }}</td>
-                <td class="label">Weight (kg)</td>
-                <td class="value">{{ $formData['generalInformation']['weightKg'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Checking Aid No.</td>
-                <td class="value">{{ $formData['generalInformation']['checkingAidNo'] ?? '_______________' }}</td>
-                <td class="label">Process Engineering Change Level</td>
-                <td class="value">{{ $formData['generalInformation']['processEngineeringChangeLevel'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Process Engineering Change Date</td>
-                <td class="value" colspan="3">{{ $formData['generalInformation']['processEngineeringChangeDate'] ?? '_______________' }}</td>
-            </tr>
-        </table>
+    <div class="v" style="left:361.00pt; top:624.20pt; width:87.50pt;">{{ $declaration['signatureDate'] ?? '' }}</div>
+    <div class="v" style="left:471.50pt; top:741.95pt; width:50.00pt;">{{ $internal['approvedDate'] ?? '' }}</div>
 
-        <!-- STEP 2: SUPPLIER & SUBMISSION INFORMATION -->
-        <div class="section-title">2. SUPPLIER & SUBMISSION INFORMATION</div>
-        
-        <table class="form-table">
-            <tr>
-                <td class="label">Supplier Name</td>
-                <td class="value" colspan="3">{{ $formData['supplierSubmissionInfo']['supplierName'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Supplier Code</td>
-                <td class="value">{{ $formData['supplierSubmissionInfo']['supplierCode'] ?? '_______________' }}</td>
-                <td class="label">Street Address</td>
-                <td class="value">{{ $formData['supplierSubmissionInfo']['streetAddress'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">City</td>
-                <td class="value">{{ $formData['supplierSubmissionInfo']['city'] ?? '_______________' }}</td>
-                <td class="label">State / Province</td>
-                <td class="value">{{ $formData['supplierSubmissionInfo']['state'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Zip Code</td>
-                <td class="value">{{ $formData['supplierSubmissionInfo']['zip'] ?? '_______________' }}</td>
-                <td class="label">Customer Name / Division</td>
-                <td class="value">{{ $formData['supplierSubmissionInfo']['customerNameDivision'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Buyer / Buyer Code</td>
-                <td class="value" colspan="3">{{ $formData['supplierSubmissionInfo']['buyerBuyerCode'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Application</td>
-                <td class="value" colspan="3">{{ $formData['supplierSubmissionInfo']['application'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Submission Information</td>
-                <td class="value" colspan="3">
-                    <div class="checkbox-group">
-                        @php $submissionInfo = json_decode($psw->submission_information, true) ?? []; @endphp
-                        <div class="checkbox-item {{ in_array('first_time', $submissionInfo) ? 'checked' : '' }}">First time submission</div>
-                        <div class="checkbox-item {{ in_array('change', $submissionInfo) ? 'checked' : '' }}">Change submission</div>
-                        <div class="checkbox-item {{ in_array('re_approval', $submissionInfo) ? 'checked' : '' }}">Re-approval submission</div>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">Contains Prohibited Substances</td>
-                <td class="value">{{ $formData['supplierSubmissionInfo']['containsProhibitedSubstances'] ? '☑ Yes' : '☐ No' }}</td>
-                <td class="label">Plastic Has ISO Marking</td>
-                <td class="value">{{ $formData['supplierSubmissionInfo']['plasticHasIsoMarking'] ? '☑ Yes' : '☐ No' }}</td>
-            </tr>
-        </table>
+    <!-- CHECKBOX -->
+    <div class="cb" style="left:199.50pt; top:94.60pt;"></div>
+    @if(!empty($general['safetyGovernmentRegulation']))<div class="ck" style="left:197.60pt; top:93.20pt;">&#10003;</div>@endif
+    <div class="cb" style="left:233.30pt; top:94.60pt;"></div>
+    @if(empty($general['safetyGovernmentRegulation']))<div class="ck" style="left:231.40pt; top:93.20pt;">&#10003;</div>@endif
+    <div class="cb" style="left:323.10pt; top:204.70pt;"></div>
+    @if($has($submissionInfo, 'dimensional'))<div class="ck" style="left:321.20pt; top:203.30pt;">&#10003;</div>@endif
+    <div class="cb" style="left:388.70pt; top:204.70pt;"></div>
+    @if($has($submissionInfo, 'materials_functional'))<div class="ck" style="left:386.80pt; top:203.30pt;">&#10003;</div>@endif
+    <div class="cb" style="left:487.00pt; top:204.70pt;"></div>
+    @if($has($submissionInfo, 'appearance'))<div class="ck" style="left:485.10pt; top:203.30pt;">&#10003;</div>@endif
+    <div class="cb" style="left:428.90pt; top:303.20pt;"></div>
+    @if(!empty($supplier['containsProhibitedSubstances']))<div class="ck" style="left:427.00pt; top:301.80pt;">&#10003;</div>@endif
+    <div class="cb" style="left:479.80pt; top:303.20pt;"></div>
+    @if(empty($supplier['containsProhibitedSubstances']))<div class="ck" style="left:477.90pt; top:301.80pt;">&#10003;</div>@endif
+    <div class="cb" style="left:428.90pt; top:314.80pt;"></div>
+    @if(!empty($supplier['plasticHasIsoMarking']))<div class="ck" style="left:427.00pt; top:313.40pt;">&#10003;</div>@endif
+    <div class="cb" style="left:479.80pt; top:314.80pt;"></div>
+    @if(empty($supplier['plasticHasIsoMarking']))<div class="ck" style="left:477.90pt; top:313.40pt;">&#10003;</div>@endif
+    <div class="cb" style="left:80.80pt; top:350.00pt;"></div>
+    @if($has($reasonSubmission, 'initial_submission', ['initial']))<div class="ck" style="left:78.90pt; top:348.60pt;">&#10003;</div>@endif
+    <div class="cb" style="left:80.80pt; top:361.60pt;"></div>
+    @if($has($reasonSubmission, 'engineering_changes', ['engineering_change', 'design_change']))<div class="ck" style="left:78.90pt; top:360.20pt;">&#10003;</div>@endif
+    <div class="cb" style="left:80.80pt; top:373.10pt;"></div>
+    @if($has($reasonSubmission, 'tooling_transfer', ['tooling']))<div class="ck" style="left:78.90pt; top:371.70pt;">&#10003;</div>@endif
+    <div class="cb" style="left:80.80pt; top:384.70pt;"></div>
+    @if($has($reasonSubmission, 'correction_discrepancy', ['correction']))<div class="ck" style="left:78.90pt; top:383.30pt;">&#10003;</div>@endif
+    <div class="cb" style="left:80.80pt; top:396.20pt;"></div>
+    @if($has($reasonSubmission, 'tooling_inactive'))<div class="ck" style="left:78.90pt; top:394.80pt;">&#10003;</div>@endif
+    <div class="cb" style="left:378.00pt; top:350.00pt;"></div>
+    @if($has($reasonSubmission, 'change_optional_construction', ['optional_construction']))<div class="ck" style="left:376.10pt; top:348.60pt;">&#10003;</div>@endif
+    <div class="cb" style="left:378.00pt; top:361.60pt;"></div>
+    @if($has($reasonSubmission, 'sub_supplier_change', ['supplier_change']))<div class="ck" style="left:376.10pt; top:360.20pt;">&#10003;</div>@endif
+    <div class="cb" style="left:378.00pt; top:373.10pt;"></div>
+    @if($has($reasonSubmission, 'change_part_processing', ['part_processing', 'process_change']))<div class="ck" style="left:376.10pt; top:371.70pt;">&#10003;</div>@endif
+    <div class="cb" style="left:378.00pt; top:384.70pt;"></div>
+    @if($has($reasonSubmission, 'parts_additional_location', ['additional_location']))<div class="ck" style="left:376.10pt; top:383.30pt;">&#10003;</div>@endif
+    <div class="cb" style="left:378.00pt; top:396.20pt;"></div>
+    @if($has($reasonSubmission, 'other'))<div class="ck" style="left:376.10pt; top:394.80pt;">&#10003;</div>@endif
+    <div class="cb" style="left:174.60pt; top:437.50pt;"></div>
+    @if($has($submissionResults, 'dimensional_measurements', ['dimensional']))<div class="ck" style="left:172.70pt; top:436.10pt;">&#10003;</div>@endif
+    <div class="cb" style="left:346.90pt; top:437.50pt;"></div>
+    @if($has($submissionResults, 'material_functional_tests', ['materials_functional']))<div class="ck" style="left:345.00pt; top:436.10pt;">&#10003;</div>@endif
+    <div class="cb" style="left:174.60pt; top:449.00pt;"></div>
+    @if($has($submissionResults, 'appearance_criteria', ['appearance']))<div class="ck" style="left:172.70pt; top:447.60pt;">&#10003;</div>@endif
+    <div class="cb" style="left:346.90pt; top:449.00pt;"></div>
+    @if($has($submissionResults, 'statistical_process_evaluation', ['statistical']))<div class="ck" style="left:345.00pt; top:447.60pt;">&#10003;</div>@endif
+    <div class="cb" style="left:346.90pt; top:471.40pt;"></div>
+    @if(!empty($reason['meetsAllRequirements']))<div class="ck" style="left:345.00pt; top:470.00pt;">&#10003;</div>@endif
+    <div class="cb" style="left:403.50pt; top:471.40pt;"></div>
+    @if(empty($reason['meetsAllRequirements']))<div class="ck" style="left:401.60pt; top:470.00pt;">&#10003;</div>@endif
+    <div class="cb" style="left:82.90pt; top:674.70pt;"></div>
+    @if($customerDecision === 'approved')<div class="ck" style="left:81.00pt; top:673.30pt;">&#10003;</div>@endif
+    <div class="cb" style="left:191.70pt; top:674.70pt;"></div>
+    @if(in_array($customerDecision, ['interim approved', 'interim_approved'], true))<div class="ck" style="left:189.80pt; top:673.30pt;">&#10003;</div>@endif
+    <div class="cb" style="left:332.90pt; top:674.70pt;"></div>
+    @if($customerDecision === 'rejected')<div class="ck" style="left:331.00pt; top:673.30pt;">&#10003;</div>@endif
 
-        <!-- PAGE BREAK IF NEEDED -->
-        <div class="page-break"></div>
-    </div>
-
-    <div class="page">
-        <!-- STEP 3: REASON FOR SUBMISSION & RESULTS -->
-        <div class="section-title">3. REASON FOR SUBMISSION & RESULTS</div>
-        
-        <table class="form-table">
-            <tr>
-                <td class="label">Reason for Submission</td>
-                <td class="value" colspan="3">
-                    <div class="checkbox-group">
-                        @php $reasonSubmission = json_decode($psw->reason_for_submission, true) ?? []; @endphp
-                        <div class="checkbox-item {{ in_array('initial', $reasonSubmission) ? 'checked' : '' }}">Initial submission</div>
-                        <div class="checkbox-item {{ in_array('design_change', $reasonSubmission) ? 'checked' : '' }}">Design change</div>
-                        <div class="checkbox-item {{ in_array('process_change', $reasonSubmission) ? 'checked' : '' }}">Process change</div>
-                        <div class="checkbox-item {{ in_array('supplier_change', $reasonSubmission) ? 'checked' : '' }}">Supplier change</div>
-                        <div class="checkbox-item {{ in_array('other', $reasonSubmission) ? 'checked' : '' }}">Other</div>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">Other Reason Details</td>
-                <td class="value" colspan="3">{{ $formData['reasonResults']['reasonOtherText'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Submission Results</td>
-                <td class="value" colspan="3">
-                    <div class="checkbox-group">
-                        @php $submissionResults = json_decode($psw->submission_results, true) ?? []; @endphp
-                        <div class="checkbox-item {{ in_array('pass', $submissionResults) ? 'checked' : '' }}">Pass - meets all requirements</div>
-                        <div class="checkbox-item {{ in_array('conditional', $submissionResults) ? 'checked' : '' }}">Conditional pass with minor deviations</div>
-                        <div class="checkbox-item {{ in_array('fail', $submissionResults) ? 'checked' : '' }}">Fail - does not meet requirements</div>
-                    </div>
-                </td>
-            </tr>
-            <tr>
-                <td class="label">Meets All Requirements</td>
-                <td class="value">{{ $formData['reasonResults']['meetsAllRequirements'] ? '☑ Yes' : '☐ No' }}</td>
-                <td class="label">Explanation (if not meet)</td>
-                <td class="value">{{ $formData['reasonResults']['explanationIfNotMeet'] ?? '_______________' }}</td>
-            </tr>
-        </table>
-
-        <!-- STEP 4: DECLARATION & SIGNATURE -->
-        <div class="section-title">4. DECLARATION & SIGNATURE</div>
-        
-        <table class="form-table">
-            <tr>
-                <td class="label">Explanation / Comments</td>
-                <td class="value" colspan="3">{{ $formData['declaration']['explanationComments'] ?? '_______________' }}</td>
-            </tr>
-        </table>
-
-        <!-- SIGNATURE SECTION -->
-        <div class="signature-section-header">AUTHORIZED REPRESENTATIVE DECLARATION</div>
-        <table class="signature-table">
-            <tr>
-                <td>
-                    <strong>Authorized Signature</strong><br><br><br>
-                    _________________________<br>
-                    Signature
-                </td>
-                <td>
-                    <strong>Print Name</strong><br><br>
-                    {{ $formData['declaration']['printName'] ?? '_______________' }}<br>
-                    Name (Print)
-                </td>
-                <td>
-                    <strong>Title</strong><br><br>
-                    {{ $formData['declaration']['title'] ?? '_______________' }}<br>
-                    Title
-                </td>
-            </tr>
-            <tr>
-                <td colspan="3" class="center">
-                    <strong>Date of Submission:</strong> {{ $formData['declaration']['signatureDate'] ?? '_______________' }}<br>
-                    <strong>Phone No.:</strong> {{ $formData['declaration']['phoneNo'] ?? '_______________' }} | 
-                    <strong>Fax No.:</strong> {{ $formData['declaration']['faxNo'] ?? '_______________' }}
-                </td>
-            </tr>
-        </table>
-
-        <!-- INTERNAL AKEBONO REVIEW SECTION (READ-ONLY) -->
-        <div class="section-title">5. INTERNAL AKEBONO REVIEW & DECISION</div>
-        
-        <table class="form-table">
-            <tr>
-                <td class="label">Internal Decision</td>
-                <td class="value">{{ $formData['internalAkebono']['decision'] ?? 'PENDING REVIEW' }}</td>
-                <td class="label">Reviewed By</td>
-                <td class="value">{{ $formData['internalAkebono']['approvedBy'] ?? '_______________' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Review Date</td>
-                <td class="value">{{ $formData['internalAkebono']['approvedDate'] ?? '_______________' }}</td>
-                <td class="label">Notes / Comments</td>
-                <td class="value">{{ $formData['internalAkebono']['notes'] ?? '_______________' }}</td>
-            </tr>
-        </table>
-
-        <!-- FOOTER -->
-        <div class="approval-status">
-            Status: {{ strtoupper($psw->status) }}<br>
-            Submitted: {{ $psw->submitted_at?->format('Y-m-d H:i') ?? 'Not yet submitted' }}
-        </div>
-
-        <p style="text-align: center; margin-top: 20px; font-size: 9px;">
-            This document is generated from the PT Akebono Approval System<br>
-            Generated on: {{ now()->format('Y-m-d H:i:s') }}
-        </p>
-    </div>
+</div>
 </body>
 </html>

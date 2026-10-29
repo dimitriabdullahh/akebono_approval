@@ -7,6 +7,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\SignedUrlController;
+use App\Http\Controllers\MsaGageRrController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,9 +32,66 @@ Route::get('/logout', function () {
     return redirect()->route('login');
 })->name('logout.get');
 
+// Employee Authentication Routes
+Route::prefix('employee')->name('employee.')->group(function () {
+    Route::get('/login', [\App\Http\Controllers\EmployeeAuthController::class, 'showLogin'])
+        ->name('login')
+        ->middleware('guest:employee');
+    
+    Route::post('/login', [\App\Http\Controllers\EmployeeAuthController::class, 'login'])
+        ->name('login.post')
+        ->middleware('guest:employee');
+    
+    Route::post('/logout', [\App\Http\Controllers\EmployeeAuthController::class, 'logout'])
+        ->name('logout');
+});
+
 // Portal access via token (no login required)
 Route::get('/portal/{token}', [\App\Http\Controllers\PortalController::class, 'accessViaToken'])
     ->name('portal.access');
+
+// External Approval Routes (email-based approval without login)
+Route::prefix('approval')->name('external-approval.')->group(function () {
+    Route::get('/{token}', [\App\Http\Controllers\ExternalApprovalController::class, 'show'])
+        ->name('show');
+    
+    Route::post('/{token}/approve', [\App\Http\Controllers\ExternalApprovalController::class, 'approve'])
+        ->name('approve');
+    
+    Route::post('/{token}/reject', [\App\Http\Controllers\ExternalApprovalController::class, 'requestRevision'])
+        ->name('reject');
+    
+    Route::get('/{token}/success', [\App\Http\Controllers\ExternalApprovalController::class, 'success'])
+        ->name('success');
+    
+    Route::get('/{token}/document/view', [\App\Http\Controllers\ExternalApprovalController::class, 'viewDocument'])
+        ->name('view-document')
+        ->defaults('action', 'view');
+    
+    Route::get('/{token}/document/download', [\App\Http\Controllers\ExternalApprovalController::class, 'viewDocument'])
+        ->name('download-document')
+        ->defaults('action', 'download');
+});
+
+// QR Code Signature Verification (public access)
+Route::get('/signature/verify/{token}', [\App\Http\Controllers\SignatureVerificationController::class, 'verify'])
+    ->name('signature.verify');
+
+// QR Code Image Generation
+Route::get('/signature/qr/{token}', function($token) {
+    $qrService = app(\App\Services\QRCodeService::class);
+    $verificationUrl = route('signature.verify', ['token' => $token]);
+    
+    try {
+        $qrCodeBase64 = $qrService->generateBase64($verificationUrl, 200);
+        
+        // Return as image
+        $imageData = base64_decode(str_replace('data:image/png;base64,', '', $qrCodeBase64));
+        return response($imageData)->header('Content-Type', 'image/png');
+    } catch (\Exception $e) {
+        abort(500, 'Failed to generate QR code');
+    }
+})->name('signature.qr');
 
 // Portal routes (no auth required, token-based)
 Route::prefix('supplier/upload')->name('portal.')->group(function () {
@@ -79,8 +137,8 @@ Route::prefix('inspection-standard')->name('inspection-standard.')->group(functi
 });
 
 // Inspection Standard API routes (token-based, no auth required)
-Route::prefix('api/inspection-standards')->name('api.inspection-standards.')->group(function () {
-    Route::get('/{token}', [\App\Http\Controllers\InspectionStandardController::class, 'getForm'])
+Route::prefix('api/is')->name('api.is.')->group(function () {
+    Route::get('/form/{token}', [\App\Http\Controllers\InspectionStandardController::class, 'getForm'])
         ->name('get-form');
     
     Route::post('/{inspectionStandardId}/draft', [\App\Http\Controllers\InspectionStandardController::class, 'saveDraft'])
@@ -97,6 +155,27 @@ Route::prefix('api/inspection-standards')->name('api.inspection-standards.')->gr
     
     Route::get('/{inspectionStandardId}', [\App\Http\Controllers\InspectionStandardController::class, 'show'])
         ->name('show');
+});
+
+// MSA Gage R&R routes (token-based, no auth required)
+Route::get('/supplier/msa/{token}', [\App\Http\Controllers\MsaGageRrController::class, 'page'])
+    ->name('supplier.msa');
+
+Route::prefix('api/msa')->name('api.msa.')->group(function () {
+    Route::get('/form/{token}', [\App\Http\Controllers\MsaGageRrController::class, 'form'])
+        ->name('get-form');
+    
+    Route::post('/{id}/draft', [\App\Http\Controllers\MsaGageRrController::class, 'saveDraft'])
+        ->name('save-draft');
+    
+    Route::post('/{id}/submit', [\App\Http\Controllers\MsaGageRrController::class, 'submit'])
+        ->name('submit');
+    
+    Route::get('/{id}/pdf', [\App\Http\Controllers\MsaGageRrController::class, 'pdf'])
+        ->name('pdf');
+    
+    Route::get('/{id}/download', [\App\Http\Controllers\MsaGageRrController::class, 'download'])
+        ->name('download');
 });
 
 // Auto-login from signed URL (for email links)
@@ -138,6 +217,10 @@ Route::prefix('supplier')->name('supplier.')->middleware(['auth', 'supplier'])->
     Route::get('/request/{requestId}/part/{partId}/documents', [\App\Http\Controllers\SupplierController::class, 'getPartDocuments'])
         ->name('part.documents');
 
+    // Submit all documents for a part
+    Route::post('/part/{partId}/submit', [\App\Http\Controllers\SupplierController::class, 'submitAllDocuments'])
+        ->name('part.submit');
+
     Route::get('/document/{documentId}', [\App\Http\Controllers\SupplierController::class, 'showDocument'])
         ->name('document');
 
@@ -164,70 +247,81 @@ Route::prefix('supplier')->name('supplier.')->middleware(['auth', 'supplier'])->
         ->name('part.submit');
 });
 
-// Admin Panel Routes (Authentication required)
-Route::middleware(['auth', 'verified'])->group(function () {
+// Admin Panel Routes (Authentication required - supports both employee and legacy user auth)
+Route::middleware(['internal_admin'])->group(function () {
     
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])
-        ->name('dashboard')
-        ->middleware('internal_admin');
+        ->name('dashboard');
 
     Route::get('/dashboard/not-submitted', [DashboardController::class, 'notSubmitted'])
-        ->name('dashboard.not_submitted')
-        ->middleware('internal_admin');
+        ->name('dashboard.not_submitted');
 
     Route::get('/dashboard/in-progress', [DashboardController::class, 'inProgress'])
-        ->name('dashboard.in_progress')
-        ->middleware('internal_admin');
+        ->name('dashboard.in_progress');
 
     Route::get('/dashboard/completed', [DashboardController::class, 'completed'])
-        ->name('dashboard.completed')
-        ->middleware('internal_admin');
+        ->name('dashboard.completed');
 
     // Admin Request Management - Semua admin internal bisa akses, tapi hanya QA yang bisa create
     Route::prefix('requests')->name('requests.')->group(function () {
         Route::get('/', [RequestController::class, 'index'])
-            ->name('index')
-            ->middleware('internal_admin');
+            ->name('index');
 
         Route::get('/create', [RequestController::class, 'create'])
-            ->name('create')
-            ->middleware('internal_admin'); // Controller akan check canCreateRequest()
+            ->name('create'); // Controller akan check canCreateRequest()
 
         Route::post('/', [RequestController::class, 'store'])
-            ->name('store')
-            ->middleware('internal_admin'); // Controller akan check canCreateRequest()
+            ->name('store'); // Controller akan check canCreateRequest()
 
         Route::get('/{documentRequest}', [RequestController::class, 'show'])
-            ->name('show')
-            ->middleware('internal_admin');
+            ->name('show');
 
         Route::get('/{documentRequest}/review', [RequestController::class, 'review'])
-            ->name('review')
-            ->middleware('internal_admin');
+            ->name('review');
 
         Route::post('/{documentRequest}/resend-email', [RequestController::class, 'resendEmail'])
-            ->name('resend-email')
-            ->middleware('internal_admin');
+            ->name('resend-email');
+    });
+
+    // Universal Document Preview - All document types
+    Route::prefix('document')->name('admin.document.')->group(function () {
+        Route::get('/{requestDocumentId}/preview', [\App\Http\Controllers\DocumentPreviewController::class, 'preview'])
+            ->name('preview');
+        
+        Route::get('/{requestDocumentId}/serve', [\App\Http\Controllers\DocumentPreviewController::class, 'serve'])
+            ->name('serve');
     });
 
     // Admin Review & Approval (dengan scope checking sesuai Implementation Document)
     Route::prefix('review')->name('review.')->group(function () {
         Route::get('/', [ReviewController::class, 'index'])
-            ->name('index')
-            ->middleware('internal_admin');
+            ->name('index');
 
         Route::get('/{requestDocument}', [ReviewController::class, 'show'])
             ->name('show')
-            ->middleware(['internal_admin', 'scope.check']);
+            ->middleware('scope.check');
 
         Route::post('/{requestDocument}/approve', [ReviewController::class, 'approve'])
             ->name('approve')
-            ->middleware(['internal_admin', 'scope.check']);
+            ->middleware('scope.check');
 
         Route::post('/{requestDocument}/reject', [ReviewController::class, 'reject'])
             ->name('reject')
-            ->middleware(['internal_admin', 'scope.check']);
+            ->middleware('scope.check');
+        
+        // Checker actions
+        Route::post('/{requestDocument}/complete-check', [ReviewController::class, 'completeCheck'])
+            ->name('complete-check')
+            ->middleware('scope.check');
+        
+        Route::post('/{requestDocument}/checker-revision', [ReviewController::class, 'checkerRequestRevision'])
+            ->name('checker-revision')
+            ->middleware('scope.check');
+        
+        Route::post('/{requestDocument}/receive', [ReviewController::class, 'receiveDocument'])
+            ->name('receive')
+            ->middleware('scope.check');
     });
 
     // Konfigurasi Deadline - Semua admin internal dapat mengubah konfigurasi
@@ -290,7 +384,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('admin.documents.history')
         ->middleware('internal_admin');
 
-    // Admin review routes for PSW and PS forms
+    // Admin review routes for PSW, PS, and MSA forms
     Route::prefix('admin/forms')->name('admin.forms.')->middleware('internal_admin')->group(function () {
         // PSW form preview/review
         Route::get('/psw/{pswId}', [\App\Http\Controllers\PartSubmissionWarrantController::class, 'adminPreview'])
@@ -305,6 +399,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         
         Route::get('/packaging-standard/{psId}/pdf', [\App\Http\Controllers\PackagingStandardController::class, 'adminViewPdf'])
             ->name('ps.pdf');
+        
+        // MSA Gage R&R form preview/review
+        Route::get('/msa/{msaId}', [\App\Http\Controllers\MsaGageRrController::class, 'adminPreview'])
+            ->name('msa.preview');
+        
+        Route::get('/msa/{msaId}/pdf', [\App\Http\Controllers\MsaGageRrController::class, 'adminViewPdf'])
+            ->name('msa.pdf');
     });
 });
 
@@ -352,6 +453,9 @@ Route::prefix('api/packaging-standards')->name('api.ps.')->group(function () {
     Route::get('/{token}', [\App\Http\Controllers\PackagingStandardController::class, 'getForm'])
         ->name('get-form');
     
+    Route::get('/{psId}/debug', [\App\Http\Controllers\PackagingStandardController::class, 'debugState'])
+        ->name('debug-state');
+    
     Route::post('/{psId}/draft', [\App\Http\Controllers\PackagingStandardController::class, 'saveDraft'])
         ->name('save-draft');
     
@@ -364,3 +468,21 @@ Route::prefix('api/packaging-standards')->name('api.ps.')->group(function () {
     Route::post('/{psId}/delete-image', [\App\Http\Controllers\PackagingStandardController::class, 'deleteImage'])
         ->name('delete-image');
 });
+
+/**
+ * Approval Blast Routes (Public, no authentication required)
+ * Token-based access for external approvers
+ */
+Route::prefix('approval')
+    ->name('approval.')
+    ->middleware('throttle:' . config('approval_blast.throttle_requests', 20) . ',1')
+    ->group(function () {
+        Route::get('/{token}', [\App\Http\Controllers\ApprovalTokenController::class, 'show'])
+            ->name('show');
+        
+        Route::post('/{token}/approve', [\App\Http\Controllers\ApprovalTokenController::class, 'approve'])
+            ->name('approve');
+        
+        Route::post('/{token}/revise', [\App\Http\Controllers\ApprovalTokenController::class, 'revise'])
+            ->name('revise');
+    });

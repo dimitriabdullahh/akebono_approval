@@ -20,10 +20,12 @@ return new class extends Migration
             $table->boolean('is_mandatory')->default(true);
             $table->json('scope')->nullable(); // Array: ['QA', 'PURCHASING', 'PPC']
             $table->text('description')->nullable();
+            $table->integer('order')->default(0); // Display order
             $table->timestamps();
 
             $table->index('code');
             $table->index('is_mandatory');
+            $table->index('order');
         });
     }
 

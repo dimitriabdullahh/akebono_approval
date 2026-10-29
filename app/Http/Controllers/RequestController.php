@@ -46,9 +46,19 @@ class RequestController extends Controller
      */
     public function create()
     {
-        // Hanya Admin QA yang dapat membuat request
-        if (!auth()->user()->canCreateRequest()) {
-            abort(403, 'Hanya Admin QA yang dapat membuat document request');
+        // Hanya QA Checker yang dapat membuat request
+        $user = auth()->user();
+        $employee = auth()->guard('employee')->user();
+        
+        $canCreate = false;
+        if ($user && method_exists($user, 'canCreateRequest')) {
+            $canCreate = $user->canCreateRequest();
+        } elseif ($employee) {
+            $canCreate = $employee->canCreateRequest();
+        }
+        
+        if (!$canCreate) {
+            abort(403, 'Hanya QA Checker yang dapat membuat document request');
         }
 
         $suppliers = Supplier::all();
@@ -62,13 +72,28 @@ class RequestController extends Controller
      */
     public function store(Request $request)
     {
-        // Hanya Admin QA yang dapat membuat request
-        if (!auth()->user()->canCreateRequest()) {
-            abort(403, 'Hanya Admin QA yang dapat membuat document request');
+        // Hanya QA Checker yang dapat membuat request
+        $user = auth()->user();
+        $employee = auth()->guard('employee')->user();
+        
+        $canCreate = false;
+        $creatorId = null;
+        
+        if ($user && method_exists($user, 'canCreateRequest')) {
+            $canCreate = $user->canCreateRequest();
+            $creatorId = $user->id;
+        } elseif ($employee) {
+            $canCreate = $employee->canCreateRequest();
+            $creatorId = $employee->npk; // Use NPK as creator ID for employee
+        }
+        
+        if (!$canCreate) {
+            abort(403, 'Hanya QA Checker yang dapat membuat document request');
         }
 
         $validated = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
+            'category' => 'required|in:New Part,4M Change',
             'model' => 'required|string|max:100',
             'due_date' => 'required|date|after:today',
             'parts' => 'required|array|min:1',
@@ -79,12 +104,14 @@ class RequestController extends Controller
         ], [
             'selected_documents.required' => 'Please select at least one document requirement.',
             'selected_documents.min' => 'Please select at least one document requirement.',
+            'category.required' => 'Category wajib dipilih.',
+            'category.in' => 'Category harus New Part atau 4M Change.',
         ]);
 
         try {
             $documentRequest = $this->requestService->createRequestWithParts(
                 $validated,
-                auth()->id()
+                $creatorId // Will be NPK for employee, ID for legacy user
             );
 
             // Send request letter email - pass only the model without deep relations
@@ -116,25 +143,53 @@ class RequestController extends Controller
      */
     public function review(DocumentRequest $documentRequest)
     {
-        // Hanya Admin QA yang dapat mengakses halaman review
-        if (!auth()->user()->isAdminQA()) {
-            abort(403, 'Hanya Admin QA yang dapat mengakses halaman review dokumen');
+        // Check authorization - support both Employee and legacy User
+        $isAuthorized = false;
+        $userScope = null;
+        
+        if (auth()->guard('employee')->check()) {
+            $employee = auth()->guard('employee')->user();
+            // Map employee division ke scope
+            $userScope = match (strtoupper($employee->division)) {
+                'QA' => 'QA',
+                'PURCHASING' => 'PURCHASING',
+                'PCC', 'PPC' => 'PPC',
+                default => null,
+            };
+            $isAuthorized = !is_null($userScope);
+        } elseif (auth()->check()) {
+            $user = auth()->user();
+            // Legacy user authorization
+            if ($user->isAdminQA()) {
+                $isAuthorized = true;
+                $userScope = 'QA';
+            } elseif ($user->role === 'admin_purchasing') {
+                $isAuthorized = true;
+                $userScope = 'PURCHASING';
+            } elseif ($user->role === 'admin_ppc') {
+                $isAuthorized = true;
+                $userScope = 'PPC';
+            }
+        }
+        
+        if (!$isAuthorized || !$userScope) {
+            abort(403, 'Anda tidak memiliki akses untuk mereview dokumen');
         }
 
         $request = $this->requestService->getById($documentRequest->id);
         
-        // Filter dokumen yang sudah disubmit dan dapat direview oleh QA
+        // Filter dokumen yang sudah disubmit dan dapat direview oleh user scope
         $submittedDocuments = $request->requestDocuments
             ->where('status', 'SUBMITTED')
-            ->filter(function($document) {
+            ->filter(function($document) use ($userScope) {
                 $scopes = $document->documentType->scope ?? [];
-                return in_array('QA', $scopes);
+                return in_array($userScope, $scopes);
             });
         
         if ($submittedDocuments->isEmpty()) {
             return redirect()
                 ->route('requests.show', $documentRequest)
-                ->with('info', 'Tidak ada dokumen yang perlu direview oleh QA saat ini');
+                ->with('info', "Tidak ada dokumen yang perlu direview oleh {$userScope} saat ini");
         }
 
         return view('admin.requests.review', compact('request', 'submittedDocuments'));

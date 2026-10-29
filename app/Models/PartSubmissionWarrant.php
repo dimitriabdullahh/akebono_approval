@@ -42,7 +42,6 @@ class PartSubmissionWarrant extends Model
         'plastic_has_iso_marking',
         // Step 3: Reason & Results
         'reason_for_submission',
-        'reason_other_text',
         'submission_results',
         'meets_all_requirements',
         'explanation_if_not_meet',
@@ -52,7 +51,7 @@ class PartSubmissionWarrant extends Model
         'title',
         'phone_no',
         'fax_no',
-        'supplier_authorized_signature',
+        'signature_qr_data',
         'signature_date',
         // Internal Akebono (readonly for supplier)
         'internal_decision',
@@ -210,9 +209,6 @@ class PartSubmissionWarrant extends Model
         if (empty($this->title)) {
             $errors[] = "Field 'Title' is required";
         }
-        if (empty($this->supplier_authorized_signature)) {
-            $errors[] = "Field 'Supplier Authorized Signature' is required";
-        }
         if (empty($this->signature_date)) {
             $errors[] = "Field 'Signature Date' is required";
         }
@@ -270,7 +266,6 @@ class PartSubmissionWarrant extends Model
             ],
             'reasonResults' => [
                 'reasonForSubmission' => $this->reason_for_submission,
-                'reasonOtherText' => $this->reason_other_text,
                 'submissionResults' => $this->submission_results,
                 'meetsAllRequirements' => $this->meets_all_requirements,
                 'explanationIfNotMeet' => $this->explanation_if_not_meet,
@@ -281,7 +276,7 @@ class PartSubmissionWarrant extends Model
                 'title' => $this->title,
                 'phoneNo' => $this->phone_no,
                 'faxNo' => $this->fax_no,
-                'supplierAuthorizedSignature' => $this->supplier_authorized_signature,
+                'signatureQrData' => $this->signature_qr_data,
                 'signatureDate' => $this->signature_date?->format('Y-m-d'),
             ],
             'internalAkebono' => [

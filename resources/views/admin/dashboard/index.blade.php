@@ -28,7 +28,7 @@
                             <i class="ti ti-list-details me-2 text-primary"></i>
                             <h5 class="mb-0 font-semibold">Daftar Permintaan Dokumen</h5>
                         </div>
-                        @if(auth()->user()->canCreateRequest())
+                        @if((auth()->check() && auth()->user()->canCreateRequest()) || (auth()->guard('employee')->check() && auth()->guard('employee')->user()->canCreateRequest()))
                         <a href="{{ route('requests.create') }}" class="btn btn-primary">
                             <i class="ti ti-plus me-2"></i>Buat Permintaan Baru
                         </a>
@@ -142,7 +142,17 @@
                                                     <i class="ti ti-eye"></i>
                                                 </a>
                                                 
-                                                @if(auth()->user()->isAdminQA() && $submitedDocs > 0)
+                                                @php
+                                                    // Check if user is QA (both legacy User and new Employee)
+                                                    $isQA = false;
+                                                    if (auth()->check() && method_exists(auth()->user(), 'isAdminQA')) {
+                                                        $isQA = auth()->user()->isAdminQA();
+                                                    } elseif (auth()->guard('employee')->check()) {
+                                                        $isQA = auth()->guard('employee')->user()->isQA();
+                                                    }
+                                                @endphp
+                                                
+                                                @if($isQA && $submitedDocs > 0)
                                                     @php
                                                         $qaReviewableDocs = $request->requestDocuments
                                                             ->where('status', 'SUBMITTED')

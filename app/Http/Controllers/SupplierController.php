@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use ZipArchive;
 
-class SupplierController extends Controller
+class SupplierController extends BaseSupplierController
 {
     public function __construct()
     {
@@ -24,8 +24,8 @@ class SupplierController extends Controller
      */
     public function dashboard()
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
+        $user = $this->getAuthenticatedUser();
 
         // Get all document requests for this supplier
         $documentRequests = DocumentRequest::where('supplier_id', $supplier->id)
@@ -73,12 +73,19 @@ class SupplierController extends Controller
      */
     public function showRequest($requestId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         $documentRequest = DocumentRequest::where('id', $requestId)
             ->where('supplier_id', $supplier->id)
-            ->with(['requestParts.requestDocuments.documentType', 'requestParts', 'supplier', 'creator'])
+            ->with([
+                'requestParts.requestDocuments.documentType',
+                'requestParts.requestDocuments.inspectionStandard',
+                'requestParts.requestDocuments.packagingStandard',
+                'requestParts.requestDocuments.partSubmissionWarrant',
+                'requestParts',
+                'supplier',
+                'creator'
+            ])
             ->firstOrFail();
 
         // Group documents by status for first part (default selection)
@@ -107,8 +114,7 @@ class SupplierController extends Controller
      */
     public function getPartDocuments($requestId, $partId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         // Verify part belongs to request and supplier
         $part = \App\Models\RequestPart::where('id', $partId)
@@ -116,7 +122,13 @@ class SupplierController extends Controller
             ->whereHas('documentRequest', function($query) use ($supplier) {
                 $query->where('supplier_id', $supplier->id);
             })
-            ->with(['requestDocuments.documentType', 'documentRequest'])
+            ->with([
+                'requestDocuments.documentType',
+                'requestDocuments.inspectionStandard',
+                'requestDocuments.packagingStandard',
+                'requestDocuments.partSubmissionWarrant',
+                'documentRequest'
+            ])
             ->firstOrFail();
 
         // Calculate counters
@@ -151,8 +163,7 @@ class SupplierController extends Controller
      */
     public function showDocument($documentId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         $document = RequestDocument::whereHas('documentRequest', function($query) use ($supplier) {
                 $query->where('supplier_id', $supplier->id);
@@ -168,8 +179,7 @@ class SupplierController extends Controller
      */
     public function uploadForm($documentId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         $document = RequestDocument::whereHas('documentRequest', function($query) use ($supplier) {
                 $query->where('supplier_id', $supplier->id);
@@ -190,8 +200,8 @@ class SupplierController extends Controller
      */
     public function uploadDocument(Request $request, $documentId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $user = $this->getAuthenticatedUser();
+        $supplier = $this->getAuthenticatedSupplier();
 
         $document = RequestDocument::whereHas('documentRequest', function($query) use ($supplier) {
                 $query->where('supplier_id', $supplier->id);
@@ -282,8 +292,7 @@ class SupplierController extends Controller
      */
     public function viewDocument($documentId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         $document = RequestDocument::whereHas('documentRequest', function($query) use ($supplier) {
                 $query->where('supplier_id', $supplier->id);
@@ -308,8 +317,7 @@ class SupplierController extends Controller
      */
     public function downloadDocument($documentId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         $document = RequestDocument::whereHas('documentRequest', function($query) use ($supplier) {
                 $query->where('supplier_id', $supplier->id);
@@ -328,8 +336,7 @@ class SupplierController extends Controller
      */
     public function downloadAllApproved($requestId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         $documentRequest = DocumentRequest::where('id', $requestId)
             ->where('supplier_id', $supplier->id)
@@ -382,6 +389,23 @@ class SupplierController extends Controller
             $user = auth()->user();
             $supplier = $user->supplier;
 
+            // Check if supplier relationship exists
+            if (!$supplier) {
+                \Log::error('Supplier relationship is null in accessFromEmail', [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'supplier_id' => $user->supplier_id
+                ]);
+                
+                // Force logout
+                auth()->logout();
+                request()->session()->invalidate();
+                request()->session()->regenerateToken();
+                
+                return redirect()->route('login')
+                    ->with('error', 'Akun supplier Anda belum terhubung dengan data supplier. Silakan hubungi administrator.');
+            }
+
             // Verify the request belongs to this supplier
             $documentRequest = DocumentRequest::where('id', $requestId)
                 ->where('supplier_id', $supplier->id)
@@ -411,13 +435,20 @@ class SupplierController extends Controller
      */
     public function showDocumentRequest($request)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         // Verify the request belongs to this supplier
         $documentRequest = DocumentRequest::where('id', $request)
             ->where('supplier_id', $supplier->id)
-            ->with(['requestParts.requestDocuments.documentType', 'requestParts', 'supplier', 'creator'])
+            ->with([
+                'requestParts.requestDocuments.documentType',
+                'requestParts.requestDocuments.inspectionStandard',
+                'requestParts.requestDocuments.packagingStandard',
+                'requestParts.requestDocuments.partSubmissionWarrant',
+                'requestParts',
+                'supplier',
+                'creator'
+            ])
             ->firstOrFail();
 
         // Redirect to the request detail page
@@ -429,8 +460,7 @@ class SupplierController extends Controller
      */
     public function outstandingDocuments()
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         $outstandingRequests = DocumentRequest::where('supplier_id', $supplier->id)
             ->whereHas('requestDocuments', function($query) {
@@ -450,8 +480,7 @@ class SupplierController extends Controller
      */
     public function saveDraft(Request $request, $partId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $supplier = $this->getAuthenticatedSupplier();
 
         // Verify part belongs to supplier
         $part = \App\Models\RequestPart::where('id', $partId)
@@ -493,8 +522,8 @@ class SupplierController extends Controller
      */
     public function submitAllDocuments(Request $request, $partId)
     {
-        $user = auth()->user();
-        $supplier = $user->supplier;
+        $user = $this->getAuthenticatedUser();
+        $supplier = $this->getAuthenticatedSupplier();
 
         // Verify part belongs to supplier
         $part = \App\Models\RequestPart::where('id', $partId)
@@ -509,16 +538,132 @@ class SupplierController extends Controller
             ->whereHas('documentType', function($query) {
                 $query->where('is_mandatory', true);
             })
+            ->with(['documentType', 'inspectionStandard', 'msaGageRr', 'partSubmissionWarrant', 'packagingStandard'])
             ->get();
 
+        \Log::info('[Submit All] Checking mandatory documents', [
+            'part_id' => $partId,
+            'total_mandatory' => $mandatoryDocs->count(),
+            'documents' => $mandatoryDocs->map(function($doc) {
+                return [
+                    'id' => $doc->id,
+                    'code' => $doc->documentType->code ?? 'UNKNOWN',
+                    'status' => $doc->status,
+                    'has_form' => !is_null($doc->inspectionStandard ?? $doc->msaGageRr ?? $doc->partSubmissionWarrant ?? $doc->packagingStandard),
+                ];
+            })->toArray(),
+        ]);
+
         $missingMandatory = $mandatoryDocs->filter(function($doc) {
-            return $doc->status === 'PENDING' || empty($doc->file_path);
+            $docCode = $doc->documentType->code ?? '';
+            
+            // Reject if status is REVISE - document must be resubmitted first
+            if ($doc->status === 'REVISE') {
+                \Log::warning('[Submit All] Document in REVISE status', [
+                    'doc_id' => $doc->id,
+                    'doc_code' => $docCode,
+                    'status' => $doc->status,
+                ]);
+                return true; // Mark as missing/invalid
+            }
+            
+            // Check based on document type
+            if ($docCode === 'IS') {
+                // Inspection Standard - check inspection_standards table
+                $is = $doc->inspectionStandard;
+                $isValid = $is && in_array(strtoupper($is->status), ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']);
+                
+                if (!$isValid) {
+                    \Log::warning('[Submit All] IS not valid', [
+                        'doc_id' => $doc->id,
+                        'has_is' => !!$is,
+                        'is_status' => $is ? $is->status : 'NO RECORD',
+                    ]);
+                }
+                
+                return !$isValid;
+            } elseif ($docCode === 'MSA') {
+                // MSA Gage R&R - check msa_gage_rr table
+                $msa = $doc->msaGageRr;
+                $isValid = $msa && in_array(strtoupper($msa->status), ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']);
+                
+                if (!$isValid) {
+                    \Log::warning('[Submit All] MSA not valid', [
+                        'doc_id' => $doc->id,
+                        'has_msa' => !!$msa,
+                        'msa_status' => $msa ? $msa->status : 'NO RECORD',
+                    ]);
+                }
+                
+                return !$isValid;
+            } elseif ($docCode === 'PSW') {
+                // Part Submission Warrant - check part_submission_warrants table
+                $psw = $doc->partSubmissionWarrant;
+                $isValid = $psw && in_array(strtoupper($psw->status), ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']);
+                
+                if (!$isValid) {
+                    \Log::warning('[Submit All] PSW not valid', [
+                        'doc_id' => $doc->id,
+                        'has_psw' => !!$psw,
+                        'psw_status' => $psw ? $psw->status : 'NO RECORD',
+                    ]);
+                }
+                
+                return !$isValid;
+            } elseif ($docCode === 'PACKAGING_STANDARD') {
+                // Packaging Standard - check packaging_standards table
+                $ps = $doc->packagingStandard;
+                $isValid = $ps && in_array(strtoupper($ps->status), ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']);
+                
+                if (!$isValid) {
+                    \Log::warning('[Submit All] PS not valid', [
+                        'doc_id' => $doc->id,
+                        'has_ps' => !!$ps,
+                        'ps_status' => $ps ? $ps->status : 'NO RECORD',
+                    ]);
+                }
+                
+                return !$isValid;
+            } else {
+                // Regular upload documents - check request_documents table
+                $isValid = in_array(strtoupper($doc->status), ['SUBMITTED', 'APPROVED']) && !empty($doc->file_path);
+                
+                if (!$isValid) {
+                    \Log::warning('[Submit All] Regular doc not valid', [
+                        'doc_id' => $doc->id,
+                        'doc_code' => $docCode,
+                        'status' => $doc->status,
+                        'has_file' => !empty($doc->file_path),
+                    ]);
+                }
+                
+                return !$isValid;
+            }
         });
 
         if ($missingMandatory->count() > 0) {
+            // Check if any documents are in REVISE status
+            $revisionDocs = $missingMandatory->filter(function($doc) {
+                return $doc->status === 'REVISE';
+            });
+            
+            if ($revisionDocs->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot submit. ' . $revisionDocs->count() . ' mandatory document(s) are marked for revision. Please resubmit the revised documents first.',
+                    'revision_documents' => $revisionDocs->map(function($doc) {
+                        return [
+                            'name' => $doc->documentType->name ?? 'Unknown Document',
+                            'revision_note' => $doc->revision_note,
+                            'revised_by_team' => $doc->getTeamLabel(),
+                        ];
+                    })->values()
+                ], 400);
+            }
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Cannot submit. ' . $missingMandatory->count() . ' mandatory document(s) are still missing.',
+                'message' => 'Cannot submit. ' . $missingMandatory->count() . ' mandatory document(s) are still missing or not submitted.',
                 'missing_documents' => $missingMandatory->pluck('documentType.name')
             ], 400);
         }

@@ -178,10 +178,12 @@ class PortalController extends Controller
                 $uploadedCount++;
             }
 
+            // NOTIFICATION DISABLED: Will be sent only when supplier clicks "Submit All Documents"
             // Check jika semua mandatory docs sudah submitted SETELAH upload
             // Hanya kirim notifikasi jika:
             // 1. Belum pernah dikirim sebelumnya (documents_submitted_notified_at === null)
             // 2. Sekarang semua mandatory docs sudah submitted
+            /*
             $documentRequest->refresh();
             
             if (
@@ -195,6 +197,7 @@ class PortalController extends Controller
                     'documents_submitted_notified_at' => now()
                 ]);
             }
+            */
 
             return response()->json([
                 'success' => true,
@@ -243,10 +246,12 @@ class PortalController extends Controller
         try {
             $this->uploadService->reuploadDocument($requestDoc, $request->file('file'), $token);
 
+            // NOTIFICATION DISABLED: Will be sent only when supplier clicks "Submit All Documents"
             // Check jika semua mandatory docs sudah submitted SETELAH reupload
             // Hanya kirim notifikasi jika:
             // 1. Belum pernah dikirim sebelumnya (documents_submitted_notified_at === null)
             // 2. Sekarang semua mandatory docs sudah submitted
+            /*
             $documentRequest->refresh();
             
             if (
@@ -260,6 +265,7 @@ class PortalController extends Controller
                     'documents_submitted_notified_at' => now()
                 ]);
             }
+            */
 
             return response()->json([
                 'success' => true,
@@ -498,7 +504,7 @@ class PortalController extends Controller
                 }
             }
 
-            // Send notification jika belum pernah dikirim
+            // Send notification - ONLY WHEN CLICKING "Submit All Documents" button
             if (is_null($documentRequest->documents_submitted_notified_at)) {
                 $this->notificationService->notifyDocumentsSubmitted($documentRequest);
                 

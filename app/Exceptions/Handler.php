@@ -37,5 +37,28 @@ class Handler extends ExceptionHandler
         $this->reportable(function (Throwable $e) {
             //
         });
+        
+        // Handle parse errors and return JSON for API routes
+        $this->renderable(function (\ParseError $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Parse Error: ' . $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ], 500);
+            }
+        });
+        
+        // Handle all exceptions for API routes
+        $this->renderable(function (Throwable $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'type' => get_class($e),
+                ], 500);
+            }
+        });
     }
 }

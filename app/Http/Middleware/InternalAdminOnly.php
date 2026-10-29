@@ -16,22 +16,58 @@ class InternalAdminOnly
      */
     public function handle(Request $request, Closure $next)
     {
-        if (!auth()->check()) {
-            return redirect()->route('login');
+        \Log::info('InternalAdminOnly middleware check', [
+            'url' => $request->url(),
+            'employee_check' => auth()->guard('employee')->check(),
+            'user_check' => auth()->check(),
+        ]);
+
+        // Check employee authentication first (new system)
+        if (auth()->guard('employee')->check()) {
+            $employee = auth()->guard('employee')->user();
+            
+            \Log::info('Employee authenticated', [
+                'npk' => $employee->npk,
+                'name' => $employee->name,
+                'is_active' => $employee->is_active,
+            ]);
+            
+            // Check if employee is active
+            if ($employee->is_active) {
+                \Log::info('Employee is active, allowing access');
+                return $next($request);
+            }
+            
+            \Log::warning('Employee is inactive, logging out');
+            
+            // If inactive, logout and redirect
+            auth()->guard('employee')->logout();
+            $request->session()->invalidate();
+            
+            return redirect()->route('login')
+                ->with('error', 'Your account has been deactivated.');
         }
 
-        $user = auth()->user();
-
-        $internalAdminRoles = [
-            'admin_qa',
-            'admin_purchasing',
-            'admin_ppc',
-        ];
-
-        if (!in_array($user->role, $internalAdminRoles)) {
-            abort(403, 'Hanya admin internal yang dapat mengakses halaman ini');
+        // Check legacy user authentication (if exists)
+        if (auth()->check()) {
+            $user = auth()->user();
+            
+            \Log::info('Legacy user authenticated', [
+                'email' => $user->email,
+                'role' => $user->role,
+            ]);
+            
+            // Allow if user is internal admin
+            if ($user->isInternalAdmin()) {
+                \Log::info('Legacy user is internal admin, allowing access');
+                return $next($request);
+            }
         }
 
-        return $next($request);
+        \Log::warning('No valid authentication found, redirecting to login');
+
+        // Not authenticated at all, redirect to login
+        return redirect()->route('login')
+            ->with('error', 'Please login to access this page.');
     }
 }

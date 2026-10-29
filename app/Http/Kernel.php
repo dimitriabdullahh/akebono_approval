@@ -43,6 +43,7 @@ class Kernel extends HttpKernel
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\ForceJsonResponse::class,
         ],
     ];
 
@@ -67,5 +68,10 @@ class Kernel extends HttpKernel
         'internal_admin' => \App\Http\Middleware\InternalAdminOnly::class,
         'supplier' => \App\Http\Middleware\SupplierOnly::class,
         'scope.check' => \App\Http\Middleware\CheckReviewScope::class,
+        
+        // Employee middleware
+        'employee' => \App\Http\Middleware\EmployeeOnly::class,
+        'employee.checker' => \App\Http\Middleware\EmployeeChecker::class,
+        'employee.approver' => \App\Http\Middleware\EmployeeApprover::class,
     ];
 }

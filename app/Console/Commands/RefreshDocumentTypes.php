@@ -79,11 +79,11 @@ class RefreshDocumentTypes extends Command
                 'description' => 'Laporan inspeksi sampel awal'
             ],
             [
-                'name' => 'X-R Control Chart (CP-CK)',
+                'name' => 'Capability Data N30 (CP,CPK)',
                 'code' => 'XR_CONTROL_CHART',
                 'is_mandatory' => true,
                 'scope' => ['QA'],
-                'description' => 'Chart kontrol X-R (CP-CK)'
+                'description' => 'Data kapabilitas N30 (CP,CPK)'
             ],
             [
                 'name' => 'Appearance Approval Report (AAR)',
@@ -149,6 +149,13 @@ class RefreshDocumentTypes extends Command
                 'is_mandatory' => false,
                 'scope' => ['QA'],
                 'description' => 'International Material Data System (Optional)'
+            ],
+            [
+                'name' => 'N1 Data',
+                'code' => 'N1_DATA',
+                'is_mandatory' => true,
+                'scope' => ['QA'],
+                'description' => 'Data N1'
             ],
         ];
 

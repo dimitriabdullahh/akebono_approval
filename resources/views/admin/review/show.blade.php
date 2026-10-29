@@ -42,7 +42,7 @@
                             @php
                                 $isPdf = false;
                                 // Check for form-based documents
-                                if ($packagingStandard || $partSubmissionWarrant) {
+                                if ($packagingStandard || $partSubmissionWarrant || $msaGageRr) {
                                     $isPdf = false; // Form-based docs don't use PDF viewer
                                 } elseif ($inspectionStandard && $inspectionStandard->pdf_file_path) {
                                     $isPdf = str_ends_with($inspectionStandard->pdf_file_path, '.pdf');
@@ -95,6 +95,13 @@
                                    title="View PDF">
                                     <i class="ti ti-file-pdf me-1"></i>View PDF
                                 </a>
+                            @elseif($msaGageRr)
+                                <a href="{{ route('admin.forms.msa.pdf', $msaGageRr->id) }}" 
+                                   class="btn btn-sm btn-success" 
+                                   target="_blank"
+                                   title="View PDF">
+                                    <i class="ti ti-file-pdf me-1"></i>View PDF
+                                </a>
                             @elseif($requestDocument->file_path && $requestDocument->file_path !== 'form')
                                 <a href="{{ Storage::disk('public')->url($requestDocument->file_path) }}" 
                                    class="btn btn-sm btn-success" 
@@ -123,13 +130,15 @@
                                 <p class="mt-3">Tipe file tidak didukung untuk preview</p>
                             </div>
                         @endif
-                    @elseif($packagingStandard || $partSubmissionWarrant)
-                        <!-- Form-Based Document Preview (PS/PSW) -->
+                    @elseif($packagingStandard || $partSubmissionWarrant || $msaGageRr)
+                        <!-- Form-Based Document Preview (PS/PSW/MSA) -->
                         <div style="width: 100%; height: 100%; overflow-y: auto; background: white;">
                             @if($packagingStandard)
                                 @include('admin.forms.ps-preview-embed', ['ps' => $packagingStandard])
                             @elseif($partSubmissionWarrant)
                                 @include('admin.forms.psw-preview-embed', ['psw' => $partSubmissionWarrant])
+                            @elseif($msaGageRr)
+                                @include('admin.forms.msa-preview-embed', ['msaGageRr' => $msaGageRr])
                             @endif
                         </div>
                     @elseif($requestDocument->file_path && $requestDocument->file_path !== 'form')
@@ -221,7 +230,14 @@
                     <div class="mb-0">
                         <label class="form-label small text-muted">Reviewer Scope</label>
                         <p class="mb-0 small">
-                            @foreach($requestDocument->documentType->scope ?? [] as $scope)
+                            @php
+                                $scopes = $requestDocument->documentType->scope ?? [];
+                                // Ensure scope is an array (handle cases where cast might not apply)
+                                if (is_string($scopes)) {
+                                    $scopes = json_decode($scopes, true) ?? [];
+                                }
+                            @endphp
+                            @foreach($scopes as $scope)
                                 <span class="badge bg-light text-dark">{{ $scope }}</span>
                             @endforeach
                         </p>
@@ -230,7 +246,14 @@
             </div>
 
             <!-- Multi-Level Approval Status Card -->
-            @if(count($requestDocument->documentType->scope ?? []) > 1)
+            @php
+                $documentScopes = $requestDocument->documentType->scope ?? [];
+                // Ensure scope is an array (handle cases where cast might not apply)
+                if (is_string($documentScopes)) {
+                    $documentScopes = json_decode($documentScopes, true) ?? [];
+                }
+            @endphp
+            @if(count($documentScopes) > 1)
                 <div class="card mb-4" style="border-left: 4px solid var(--primary-color);">
                     <div class="card-header" style="background-color: #f0f9ff; border-bottom: 1px solid #bae6fd;">
                         <h6 class="mb-0" style="color: #075985;">
@@ -239,7 +262,7 @@
                     </div>
                     <div class="card-body">
                         <p class="small text-muted mb-3">
-                            Dokumen ini memerlukan approval dari <strong>{{ count($requestDocument->documentType->scope) }} pihak</strong>
+                            Dokumen ini memerlukan approval dari <strong>{{ count($documentScopes) }} pihak</strong>
                         </p>
                         
                         @php
@@ -247,7 +270,7 @@
                             $pendingScopes = $requestDocument->getPendingScopes();
                         @endphp
 
-                        @foreach($requestDocument->documentType->scope as $scope)
+                        @foreach($documentScopes as $scope)
                             @php
                                 $scopeApproval = $requestDocument->approvals->where('scope', $scope)->where('status', 'APPROVED')->first();
                                 $isApproved = in_array($scope, $approvedScopes);
@@ -299,7 +322,9 @@
                         <div class="mt-3 pt-2">
                             <div class="progress" style="height: 8px;">
                                 @php
-                                    $progressPercentage = count($approvedScopes) > 0 ? (count($approvedScopes) / count($requestDocument->documentType->scope)) * 100 : 0;
+                                    $progressPercentage = count($approvedScopes) > 0 && count($documentScopes) > 0 
+                                        ? (count($approvedScopes) / count($documentScopes)) * 100 
+                                        : 0;
                                 @endphp
                                 <div class="progress-bar bg-success" role="progressbar" 
                                      style="width: {{ $progressPercentage }}%;" 
@@ -309,7 +334,7 @@
                                 </div>
                             </div>
                             <small class="text-muted d-block mt-1 text-center">
-                                {{ count($approvedScopes) }} dari {{ count($requestDocument->documentType->scope) }} sudah approve
+                                {{ count($approvedScopes) }} dari {{ count($documentScopes) }} sudah approve
                             </small>
                         </div>
 
@@ -408,8 +433,93 @@
                 </div>
             </div>
 
-            <!-- Approval Actions (Sticky) -->
-            @if($requestDocument->status === 'SUBMITTED')
+            <!-- Checker Actions (for Checker role) -->
+            @if($isChecker && in_array($requestDocument->status, ['SUBMITTED', 'RECEIVED']) && !$requestDocument->checked_by_employee_id)
+                <div class="card mb-4" style="border-top: 3px solid #3b82f6;">
+                    <div class="card-header" style="background-color: #eff6ff;">
+                        <h6 class="mb-0">
+                            <i class="ti ti-clipboard-check me-2"></i>Checker Decision
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-primary" role="alert">
+                            <i class="ti ti-info-circle me-2"></i>
+                            <small>
+                                You are reviewing this document as <strong>{{ $employee->division }} Checker</strong>. 
+                                After checking, the document will be automatically forwarded to the Approver.
+                            </small>
+                        </div>
+
+                        <!-- Optional Checker Notes -->
+                        <form id="checkCompleteForm" action="{{ route('review.complete-check', $requestDocument) }}" method="POST">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="checker_notes" class="form-label">Checker Notes (Optional)</label>
+                                <textarea class="form-control" id="checker_notes" name="checker_notes" rows="3" 
+                                          placeholder="Add any notes or observations..."></textarea>
+                                <small class="text-muted">These notes will be visible to the Approver</small>
+                            </div>
+
+                            <div class="d-grid gap-2 mb-3">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="ti ti-circle-check me-2"></i>
+                                    <strong>Complete Check & Forward to Approver</strong>
+                                </button>
+                            </div>
+                        </form>
+
+                        <button type="button" class="btn btn-warning btn-lg w-100" data-bs-toggle="modal" data-bs-target="#checkerRevisionModal">
+                            <i class="ti ti-alert-triangle me-2"></i>
+                            <strong>Request Revision from Supplier</strong>
+                        </button>
+                    </div>
+                </div>
+            @elseif($requestDocument->checked_at && $requestDocument->checkedByEmployee)
+                <!-- Document Already Checked -->
+                <div class="card mb-4" style="border-left: 4px solid #10b981;">
+                    <div class="card-header" style="background-color: #f0fdf4;">
+                        <h6 class="mb-0">
+                            <i class="ti ti-circle-check me-2" style="color: #10b981;"></i>
+                            Document Checked
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-start mb-3">
+                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px; min-width: 50px;">
+                                <i class="ti ti-check" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <div>
+                                <strong class="d-block">Checked by {{ $requestDocument->checkedByEmployee->name }}</strong>
+                                <small class="text-muted">{{ $requestDocument->checkedByEmployee->npk }} - {{ $requestDocument->checkedByEmployee->division }} {{ $requestDocument->checkedByEmployee->role }}</small>
+                                <br>
+                                <small class="text-muted">{{ $requestDocument->checked_at->format('d M Y H:i') }} WIB</small>
+                            </div>
+                        </div>
+
+                        @if($requestDocument->checker_notes)
+                        <div class="alert alert-light mb-3">
+                            <strong>Checker Notes:</strong>
+                            <p class="mb-0 mt-2">{{ $requestDocument->checker_notes }}</p>
+                        </div>
+                        @endif
+
+                        @if($requestDocument->checker_esign_token)
+                        <div class="text-center pt-2 border-top">
+                            <small class="text-muted d-block mb-2">Digital Signature (QR Code)</small>
+                            <img src="{{ route('signature.qr', $requestDocument->checker_esign_token) }}" 
+                                 alt="Checker Signature QR" 
+                                 style="width: 120px; height: 120px; border: 2px solid #e5e7eb; border-radius: 8px;">
+                            <br>
+                            <small class="text-muted">Scan to verify signature authenticity</small>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            <!-- Approval Actions (Sticky) - Only for Approver, not Checker -->
+            @if(!$isChecker && $requestDocument->status === 'SUBMITTED')
                 @php
                     // Check apakah user scope ini sudah approve
                     $userScopeApproved = $requestDocument->approvals
@@ -426,7 +536,7 @@
                             </h6>
                         </div>
                         <div class="card-body">
-                            @if(count($requestDocument->documentType->scope ?? []) > 1)
+                            @if(count($documentScopes) > 1)
                                 <div class="alert alert-info" role="alert">
                                     <i class="ti ti-info-circle me-2"></i>
                                     <small>
@@ -476,7 +586,7 @@
                         </small>
                     </div>
                 @endif
-            @else
+            @elseif(!$isChecker)
                 <div class="alert alert-info text-center" role="alert">
                     <i class="ti ti-info-circle me-2"></i>
                     <strong>Status Final:</strong> Dokumen sudah berstatus <strong>{{ $requestDocument->status }}</strong>
@@ -546,6 +656,76 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-warning">
                         <i class="ti ti-send me-2"></i>Kirim Permintaan Revisi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Checker Revision Modal -->
+<div class="modal fade" id="checkerRevisionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #fef3c7; border-bottom: 2px solid #fde68a;">
+                <h5 class="modal-title" style="color: #92400e;">
+                    <i class="ti ti-alert-triangle me-2"></i>Request Revision from Supplier
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('review.checker-revision', $requestDocument) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <!-- Quick Templates -->
+                    <label class="form-label small text-muted mb-2">Select Revision Template (Optional)</label>
+                    <div class="mb-3" id="checkerTemplateButtons">
+                        <button type="button" class="btn btn-outline-secondary btn-sm me-2 mb-2" onclick="useCheckerTemplate('Document incomplete. Please complete all required sections.')">
+                            <i class="ti ti-file-text me-1"></i>Incomplete
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm me-2 mb-2" onclick="useCheckerTemplate('Document quality is unclear. Please re-upload with higher resolution.')">
+                            <i class="ti ti-photo me-1"></i>Poor Quality
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm me-2 mb-2" onclick="useCheckerTemplate('Document format is incorrect. Please upload in the required format.')">
+                            <i class="ti ti-alert-triangle me-1"></i>Wrong Format
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm me-2 mb-2" onclick="useCheckerTemplate('Information is incomplete. Please add the required information.')">
+                            <i class="ti ti-note me-1"></i>Missing Info
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mb-2" onclick="useCheckerTemplate('Data does not match PO/specification. Please correct.')">
+                            <i class="ti ti-bookmark me-1"></i>Data Mismatch
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mb-2" onclick="useCheckerTemplate('Drawing/diagram is not clear. Please provide clearer version.')">
+                            <i class="ti ti-photo me-1"></i>Unclear Drawing
+                        </button>
+                    </div>
+
+                    <hr>
+
+                    <!-- Revision Note Textarea -->
+                    <div class="mb-3">
+                        <label for="checker_revision_note" class="form-label">
+                            <strong>Revision Note</strong>
+                            <span class="text-danger">*</span>
+                            <small class="text-muted float-end">
+                                <span id="checkerCharCount">0</span>/1000
+                            </small>
+                        </label>
+                        <textarea class="form-control" id="checker_revision_note" name="revision_note" rows="5" 
+                                  placeholder="Explain in detail what needs to be revised by the supplier..." 
+                                  maxlength="1000" required></textarea>
+                        <small class="text-muted">This note will be sent via email to the supplier</small>
+                    </div>
+
+                    <!-- Info Alert -->
+                    <div class="alert alert-warning" role="alert">
+                        <i class="ti ti-info-circle me-2"></i>
+                        <strong>Information:</strong> The supplier will receive an email with this revision note and will have 2 calendar days to make corrections. Automatic reminders will be sent before the deadline.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="ti ti-send me-2"></i>Send Revision Request
                     </button>
                 </div>
             </form>
@@ -650,6 +830,16 @@ function useTemplate(template) {
     document.getElementById('revision_note').value = template;
     document.getElementById('charCount').textContent = template.length;
 }
+
+function useCheckerTemplate(template) {
+    document.getElementById('checker_revision_note').value = template;
+    document.getElementById('checkerCharCount').textContent = template.length;
+}
+
+// Character counter for checker notes
+document.getElementById('checker_revision_note')?.addEventListener('keyup', function() {
+    document.getElementById('checkerCharCount').textContent = this.value.length;
+});
 </script>
 
 <style>

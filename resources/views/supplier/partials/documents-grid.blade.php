@@ -6,8 +6,10 @@
             $allDocuments = $allDocuments->merge($documents[$status]);
         }
     }
-    // Sort by document_type_id to maintain consistent order
-    $allDocuments = $allDocuments->sortBy('document_type_id');
+    // Sort by document_type order field and reset keys
+    $allDocuments = $allDocuments->sortBy(function($doc) {
+        return $doc->documentType->order ?? 999;
+    })->values(); // Reset array keys after sorting
     
     // Count by status for header
     $pendingCount = $allDocuments->where('status', 'PENDING')->count();
@@ -35,7 +37,7 @@
                 <div class="card h-100 border 
                     {{ $doc->status === 'APPROVED' ? 'border-success' : '' }}
                     {{ $doc->status === 'REVISE' ? 'border-danger' : '' }}
-                    {{ $doc->status === 'SUBMITTED' ? 'border-info' : '' }}">
+                    {{ $doc->status === 'SUBMITTED' ? 'border-success' : '' }}">
                     <div class="card-body">
                         <!-- Header with title and mandatory badge -->
                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -54,7 +56,7 @@
                                     <i class="ti ti-clock"></i> Pending Upload
                                 </span>
                             @elseif($doc->status === 'SUBMITTED')
-                                <span class="badge bg-info w-100">
+                                <span class="badge bg-success w-100">
                                     <i class="ti ti-clock-check"></i> Under Review
                                 </span>
                             @elseif($doc->status === 'REVISE')
@@ -102,14 +104,28 @@
 
                         <!-- Action Buttons -->
                         <div class="d-grid gap-2 mt-auto">
-                            @if($doc->status === 'PENDING')
+                            @php
+                                $docCode = $doc->documentType->code ?? '';
+                                // Hide upload button for these document types (form-based, coming soon)
+                                $hideUploadButton = in_array($docCode, ['XR_CONTROL_CHART', 'N1_DATA']);
+                            @endphp
+                            
+                            @if($hideUploadButton && $doc->status === 'PENDING')
+                                <!-- Hidden for form-based documents -->
+                                <div class="text-center py-2">
+                                    <i class="ti ti-clock text-muted"></i>
+                                    <div class="text-muted small">Coming Soon</div>
+                                </div>
+                            @elseif($doc->status === 'PENDING')
                                 <a href="{{ route('supplier.upload.form', $doc->id) }}" class="btn btn-primary btn-sm">
                                     <i class="ti ti-upload"></i> Upload Document
                                 </a>
                             @elseif($doc->status === 'REVISE')
+                                @if(!$hideUploadButton)
                                 <a href="{{ route('supplier.upload.form', $doc->id) }}" class="btn btn-danger btn-sm">
                                     <i class="ti ti-upload"></i> Re-upload
                                 </a>
+                                @endif
                                 @if($doc->file_path)
                                 <a href="{{ route('supplier.view', $doc->id) }}" class="btn btn-outline-secondary btn-sm" target="_blank">
                                     <i class="ti ti-eye"></i> View PDF

@@ -1,623 +1,488 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Inspection Standard - {{ $generalInformation['partNo'] ?? 'N/A' }}</title>
-    <style>
-        @page {
-            size: A4 portrait;
-            margin: 6mm 6mm 6mm 6mm;
-        }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 11px;
-            line-height: 1.2;
-            color: #000 !important;
-            background: white;
-        }
-        td, th, p, div, span {
-            color: #000 !important;
-        }
-        .page {
-            page-break-after: always;
-            border: 1px solid #000;
-            padding: 2px;
-            margin: 0;
-            min-height: 277mm;
-            background: white;
-        }
-        .page:last-child {
-            page-break-after: avoid;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 0;
-            padding: 0;
-        }
-        table td, table th {
-            border: 1.5px solid #000;
-            padding: 2px 2px;
-            vertical-align: middle;
-            font-size: 11px;
-            line-height: 1.0;
-        }
-        .no-border { border: none !important; }
-        .bold { font-weight: bold; }
-        .center { text-align: center; }
-        .left { text-align: left; }
-
-        /* HEADER SECTION - TOP */
-        .header-top {
-            width: 100%;
-            margin-bottom: 2px;
-        }
-        .header-top td {
-            padding: 1px 2px;
-            height: 20px;
-            border: none;
-            line-height: 1.0;
-        }
-        .header-top th {
-            padding: 1px 2px;
-            height: 20px;
-            border: none;
-            line-height: 1.0;
-        }
-        .logo-cell {
-            font-size: 56px;
-            font-weight: bold;
-            text-align: center;
-            width: 12%;
-            vertical-align: middle;
-        }
-        .header-label-cell {
-            font-weight: bold;
-            width: 12%;
-            font-size: 10px;
-            text-align: right;
-            padding-right: 3px;
-        }
-        .header-value-cell {
-            width: 25%;
-            font-size: 11px;
-            text-align: left;
-            padding-left: 3px;
-        }
-
-        /* PART ROUTE TABLE */
-        .route-table {
-            margin-bottom: 2px;
-            width: 100%;
-        }
-        .route-table th {
-            font-size: 10px;
-            font-weight: bold;
-            text-align: center;
-            background-color: #fff;
-            height: 14px;
-            padding: 1px 2px;
-            line-height: 1.0;
-        }
-        .route-table td {
-            text-align: center;
-            height: 14px;
-            font-size: 10px;
-            padding: 1px 2px;
-            line-height: 1.0;
-        }
-        .route-table .col-route  { width: 28%; }
-        .route-table .col-sup    { width: 14%; }
-        .route-table .col-man    { width: 12%; }
-        .route-table .col-mat    { width: 18%; }
-        .route-table .col-tol    { width: 14%; }
-        .route-table .col-wgt    { width: 14%; }
-
-        /* TITLE BLOCK */
-        .title-block {
-            text-align: center;
-            padding: 14px 0 10px 0;
-            margin-bottom: 6px;
-        }
-        .title-block .brand {
-            font-size: 56px;
-            font-weight: bold;
-            letter-spacing: 2px;
-            line-height: 1.0;
-            margin: 0;
-            padding: 0;
-        }
-        .title-block .doc-name {
-            font-size: 26px;
-            font-weight: bold;
-            margin: 2px 0;
-            line-height: 1.0;
-        }
-        .title-block .doc-sub {
-            font-size: 14px;
-            font-style: italic;
-            margin: 1px 0 0 0;
-            line-height: 1.0;
-        }
-
-        /* PART NUMBER TABLE */
-        .partno-table {
-            margin-bottom: 6px;
-            width: 100%;
-        }
-        .partno-table td {
-            border: none;
-            padding: 3px 3px;
-            font-size: 11px;
-            height: 16px;
-            line-height: 1.1;
-        }
-        .partno-table .pn-label {
-            font-weight: bold;
-            width: 14%;
-            white-space: nowrap;
-            text-align: left;
-        }
-        .partno-table .pn-colon {
-            width: 3%;
-            text-align: center;
-        }
-        .partno-table .pn-value {
-            border-bottom: 1px solid #000;
-            font-size: 12px;
-            width: 83%;
-            text-align: left;
-            padding-left: 6px;
-        }
-
-        /* APPROVAL TABLE */
-        .approval-table {
-            margin-bottom: 2px;
-            width: 100%;
-        }
-        .approval-table th {
-            font-size: 8px;
-            font-weight: bold;
-            text-align: center;
-            background-color: #fff;
-            padding: 1px 2px;
-            height: 12px;
-            line-height: 1.0;
-        }
-        .approval-table td {
-            text-align: center;
-            font-size: 9px;
-            height: 40px;
-            padding: 2px 2px;
-        }
-        .approval-table .block-header {
-            width: 33.33%;
-        }
-
-        /* REVISION TABLE */
-        .revision-table {
-            margin-bottom: 2px;
-            width: 100%;
-        }
-        .revision-title {
-            font-weight: bold;
-            font-size: 9px;
-            padding: 1px 2px;
-            background: #e8e8e8;
-            height: 10px;
-        }
-        .revision-table th {
-            font-size: 8px;
-            font-weight: bold;
-            text-align: center;
-            padding: 1px 2px;
-            height: 14px;
-            line-height: 1.0;
-            word-break: break-word;
-        }
-        .revision-table td {
-            height: 12px;
-            font-size: 8px;
-            padding: 1px 1px;
-        }
-        .revision-table .col-req   { width: 14%; }
-        .revision-table .col-mark  { width: 10%; }
-        .revision-table .col-date  { width: 10%; }
-        .revision-table .col-record { width: 38%; text-align: left; }
-        .revision-table .col-pcr   { width: 10%; }
-        .revision-table .col-sup   { width: 18%; }
-
-        /* DISTRIBUTION TABLE */
-        .distrib-table {
-            margin-bottom: 2px;
-            width: 100%;
-        }
-        .distrib-table td {
-            font-size: 9px;
-            text-align: center;
-            height: 14px;
-            padding: 1px 2px;
-            line-height: 1.0;
-        }
-        .distrib-table .distrib-label { 
-            font-weight: bold;
-            width: 6%;
-        }
-        .distrib-table .distrib-text {
-            text-align: left;
-            width: 28%;
-        }
-
-        /* DRAFT/FINAL TABLE */
-        .draft-final-table {
-            width: 100%;
-            margin-bottom: 3px;
-        }
-        .draft-final-table td {
-            font-size: 9px;
-            height: 12px;
-            padding: 1px 2px;
-            line-height: 1.0;
-        }
-        .draft-final-table .checkbox-col {
-            width: 18%;
-            text-align: center;
-        }
-        .draft-final-table .label-col {
-            width: 16%;
-            font-weight: bold;
-            text-align: left;
-        }
-        .draft-final-table .value-col {
-            width: 66%;
-            text-align: left;
-        }
-
-        .checkbox-box {
-            width: 18px;
-            height: 16px;
-            border: 1px solid #000;
-            display: inline-block;
-            margin-right: 3px;
-        }
-
-        /* PAGE 2 - DRAWING */
-        .drawing-frame {
-            border: 1px solid #000;
-            min-height: 480px;
-            padding: 6px;
-            margin: 2px 0;
-            page-break-inside: avoid;
-        }
-        .drawing-frame .dtitle {
-            font-weight: bold;
-            font-size: 12px;
-            margin-bottom: 6px;
-        }
-        .drawing-item {
-            margin-bottom: 8px;
-            page-break-inside: avoid;
-        }
-        .drawing-image {
-            max-width: 100%;
-            max-height: 300px;
-            display: block;
-            margin: 4px auto;
-        }
-        .drawing-info { 
-            font-size: 10px; 
-            margin-bottom: 2px;
-            line-height: 1.1;
-        }
-        .drawing-label { 
-            font-weight: bold; 
-            display: inline-block; 
-            width: 85px;
-            font-size: 10px;
-        }
-
-        /* PAGE 3 - INSPECTION TABLE */
-        .inspection-table {
-            margin-bottom: 2px;
-            width: 100%;
-        }
-        .inspection-table th {
-            font-size: 8px;
-            font-weight: bold;
-            background-color: #f0f0f0;
-            text-align: center;
-            padding: 1px 1px;
-            height: 14px;
-            line-height: 1.0;
-        }
-        .inspection-table td {
-            font-size: 8px;
-            height: 12px;
-            padding: 1px 1px;
-            vertical-align: middle;
-        }
-        .inspection-table .col-no    { width: 5%; text-align: center; display: none; }
-        .inspection-table .col-item  { width: 22%; text-align: left; }
-        .inspection-table .col-instr { width: 12%; text-align: left; }
-        .inspection-table .col-crit  { width: 14%; text-align: left; }
-        .inspection-table .col-rank  { width: 6%; text-align: center; }
-        .inspection-table .col-samp  { width: 9%; text-align: center; }
-        .inspection-table .col-rmk   { width: 33%; text-align: left; }
-
-        /* FOOTER */
-        .footer {
-            text-align: center;
-            font-size: 7px;
-            color: #666;
-            margin-top: 3px;
-            padding-top: 2px;
-        }
-
-        /* SPACING UTILITIES */
-        .spacer-xs { margin-bottom: 1px; }
-        .spacer-sm { margin-bottom: 2px; }
-        .spacer-md { margin-bottom: 4px; }
-    </style>
+<meta charset="UTF-8">
+<title>Inspection Standard - {{ $generalInformation['partNo'] ?? 'N/A' }}</title>
+<style>
+@page { size: 612pt 792pt; margin: 0; }
+* { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; }
+body { font-family: Helvetica, Arial, sans-serif; color: #000; background: #fff; }
+.page { position: relative; width: 612pt; height: 790pt; overflow: hidden; }
+.ln   { position: absolute; background: #000; }          /* garis tabel */
+.t    { position: absolute; white-space: nowrap; }       /* teks label tetap */
+.b    { font-weight: bold; }
+.cell { position: absolute; overflow: hidden; }          /* sel isian dinamis */
+.dimg { display: block; margin: 0 auto 4pt auto; }
+.dinfo { font-size: 8pt; line-height: 10pt; }
+.dlbl { display: inline-block; width: 70pt; font-weight: bold; }
+/* Jika di DomPDF teks terlihat naik/turun ~0.5pt, geser semua label sekaligus di sini: */
+/* .t { margin-top: 0.5pt; } */
+</style>
 </head>
 <body>
+{{-- Semua posisi (pt) diukur langsung dari vektor PDF referensi (Letter portrait 612 x 792 pt) --}}
 
-{{-- PAGE 1 — GENERAL INFORMATION (COVER) --}}
-<div class="page">
-    {{-- HEADER TOP: AAIJ logo, MODEL, DATE OF ISSUED, REF. NO --}}
-    <table class="header-top spacer-xs">
-        <tr>
-            <td rowspan="2" class="logo-cell">AAIJ</td>
-            <td class="header-label-cell">MODEL :</td>
-            <td class="header-value-cell">{{ $generalInformation['model'] ?? '' }}</td>
-            <td class="header-label-cell">DATE OF ISSUED :</td>
-            <td class="header-value-cell">{{ $generalInformation['dateIssued'] ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="header-label-cell"></td>
-            <td class="header-value-cell"></td>
-            <td class="header-label-cell">REF. NO :</td>
-            <td class="header-value-cell">{{ $generalInformation['refNo'] ?? '' }}</td>
-        </tr>
-    </table>
-
-    {{-- PART ROUTE TABLE --}}
-    <table class="route-table spacer-xs">
-        <tr>
-            <th class="col-route">PART ROUTE</th>
-            <th class="col-sup">SUPPLIER</th>
-            <th class="col-man">MANUF.</th>
-            <th class="col-mat">MATERIAL</th>
-            <th class="col-tol">GENERAL TOL</th>
-            <th class="col-wgt">WEIGHT</th>
-        </tr>
-        <tr>
-            <td>{{ $generalInformation['partRoute'] ?? 'AAIJ' }}</td>
-            <td>{{ $supplierInfo['supplier'] ?? '' }}</td>
-            <td>{{ $generalInformation['manufacturer'] ?? '' }}</td>
-            <td>{{ $generalInformation['material'] ?? '' }}</td>
-            <td>{{ $generalInformation['generalTolerance'] ?? '' }}</td>
-            <td>{{ $generalInformation['weight'] ?? '' }}</td>
-        </tr>
-    </table>
-
-    {{-- TITLE BLOCK --}}
-    <div class="title-block spacer-md">
-        <div class="brand">AAIJ</div>
-        <div class="doc-name">INSPECTION STANDARD</div>
-        <div class="doc-sub">( FOR PURCHASED PART )</div>
-    </div>
-
-    {{-- PART NO AND PART NAME --}}
-    <table class="partno-table spacer-md">
-        <tr>
-            <td class="pn-label">PART NO</td>
-            <td class="pn-colon">:</td>
-            <td class="pn-value">{{ $generalInformation['partNo'] ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="pn-label">PART NAME</td>
-            <td class="pn-colon">:</td>
-            <td class="pn-value">{{ $generalInformation['partName'] ?? '' }}</td>
-        </tr>
-    </table>
-
-    {{-- APPROVAL TABLE --}}
-    <table class="approval-table spacer-xs">
-        <tr>
-            <th colspan="3" class="block-header">Manufacturer :</th>
-            <th colspan="3" class="block-header">Supplier :</th>
-            <th colspan="3" class="block-header">Customer :</th>
-        </tr>
-        <tr>
-            <th>Approved</th><th>Checked</th><th>Issued</th>
-            <th>Approved</th><th>Checked</th><th>Issued</th>
-            <th>Approved</th><th>Checked</th><th>Received</th>
-        </tr>
-        <tr>
-            <td></td><td></td><td></td>
-            <td></td><td></td><td></td>
-            <td></td><td></td><td></td>
-        </tr>
-    </table>
-
-    {{-- REVISION TABLE --}}
-    <table class="revision-table spacer-xs">
-        <tr>
-            <td colspan="6" class="revision-title">REVISION COLUMN</td>
-        </tr>
-        <tr>
-            <th class="col-req">REVISION REQUEST<br>AAIJ QA</th>
-            <th class="col-mark">REVISE<br>MARK</th>
-            <th class="col-date">DATE</th>
-            <th class="col-record">REVISION RECORD</th>
-            <th class="col-pcr">PCR/ECR<br>NO.</th>
-            <th class="col-sup">REVISION REQUEST<br>SUPPLIER</th>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-            <td>{{ $generalInformation['revisionDate'] ?? '' }}</td>
-            <td class="left">{{ $generalInformation['revisionRecord'] ?? '' }}</td>
-            <td></td>
-            <td></td>
-        </tr>
-        @for($i = 0; $i < 8; $i++)
-        <tr>
-            <td></td><td></td><td></td><td></td><td></td><td></td>
-        </tr>
-        @endfor
-    </table>
-
-    {{-- DISTRIBUTION TABLE --}}
-    <table class="distrib-table spacer-xs">
-        <tr>
-            <td class="distrib-label">Div.<br>Mgr.</td>
-            <td class="distrib-label">Mgr.</td>
-            <td class="distrib-label">Spv.</td>
-            <td class="distrib-text">DISTRIBUTE TO :          DIVISION :</td>
-            <td class="distrib-label">Gen.<br>Mgr.</td>
-            <td class="distrib-label">Mgr.</td>
-            <td class="distrib-label">Staff</td>
-        </tr>
-    </table>
-
-    {{-- DRAFT / FINAL CHECKBOX --}}
-    <table class="draft-final-table spacer-md">
-        <tr>
-            <td rowspan="2" class="checkbox-col"><span class="checkbox-box"></span>DRAFT</td>
-            <td class="label-col">Customer</td>
-            <td class="value-col">{{ $supplierInfo['customer'] ?? 'AAIJ (PURCHASING & QUALITY DIVISION)' }}</td>
-        </tr>
-        <tr>
-            <td class="label-col">Supplier</td>
-            <td class="value-col">{{ $supplierInfo['supplier'] ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="checkbox-col"><span class="checkbox-box"></span>FINAL</td>
-            <td class="label-col">Manufacturer</td>
-            <td class="value-col">{{ $supplierInfo['manufacturer'] ?? '' }}</td>
-        </tr>
-    </table>
-
-    <div class="footer">Page 1 of 3 | Generated: {{ $generatedAt }}</div>
+{{-- ========== HALAMAN 1 : COVER ========== --}}
+<div class="page" style="page-break-after: always;">
+<div class="ln" style="left:46.7pt;top:28.1pt;width:1.9pt;height:735pt"></div>
+<div class="ln" style="left:48.6pt;top:28.1pt;width:516.7pt;height:1.9pt"></div>
+<div class="ln" style="left:150.5pt;top:30pt;width:1pt;height:37.4pt"></div>
+<div class="ln" style="left:327.7pt;top:30pt;width:1pt;height:93.6pt"></div>
+<div class="ln" style="left:563.4pt;top:30pt;width:1.9pt;height:733.1pt"></div>
+<div class="ln" style="left:48.6pt;top:66.5pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:209.6pt;top:67.4pt;width:1pt;height:56.2pt"></div>
+<div class="ln" style="left:268.6pt;top:67.4pt;width:1pt;height:56.2pt"></div>
+<div class="ln" style="left:416.2pt;top:67.4pt;width:1pt;height:56.2pt"></div>
+<div class="ln" style="left:504.8pt;top:67.4pt;width:1pt;height:56.2pt"></div>
+<div class="ln" style="left:48.6pt;top:85.2pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:48.6pt;top:122.7pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:254.3pt;top:276.3pt;width:192pt;height:0.1pt"></div>
+<div class="ln" style="left:254.3pt;top:293.1pt;width:192pt;height:0.1pt"></div>
+<div class="ln" style="left:48.6pt;top:366.8pt;width:265.2pt;height:1pt"></div>
+<div class="ln" style="left:386.7pt;top:366.8pt;width:1pt;height:75.1pt"></div>
+<div class="ln" style="left:387.7pt;top:366.8pt;width:175.7pt;height:1pt"></div>
+<div class="ln" style="left:180pt;top:367.7pt;width:1pt;height:74.2pt"></div>
+<div class="ln" style="left:312.9pt;top:367.7pt;width:1pt;height:74.2pt"></div>
+<div class="ln" style="left:48.6pt;top:379.1pt;width:265.2pt;height:1pt"></div>
+<div class="ln" style="left:387.7pt;top:379.1pt;width:175.7pt;height:1pt"></div>
+<div class="ln" style="left:91.5pt;top:380.1pt;width:1pt;height:61.8pt"></div>
+<div class="ln" style="left:135.7pt;top:380.1pt;width:1pt;height:61.8pt"></div>
+<div class="ln" style="left:224.3pt;top:380.1pt;width:1pt;height:61.8pt"></div>
+<div class="ln" style="left:268.6pt;top:380.1pt;width:1pt;height:61.8pt"></div>
+<div class="ln" style="left:445.8pt;top:380.1pt;width:1pt;height:61.8pt"></div>
+<div class="ln" style="left:504.8pt;top:380.1pt;width:1pt;height:61.8pt"></div>
+<div class="ln" style="left:48.6pt;top:391.5pt;width:265.2pt;height:1pt"></div>
+<div class="ln" style="left:387.7pt;top:391.5pt;width:175.7pt;height:1pt"></div>
+<div class="ln" style="left:48.6pt;top:440.9pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:48.6pt;top:453.3pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:135.7pt;top:454.3pt;width:1pt;height:306.9pt"></div>
+<div class="ln" style="left:165.3pt;top:454.3pt;width:1pt;height:208.9pt"></div>
+<div class="ln" style="left:209.6pt;top:454.3pt;width:1pt;height:141.6pt"></div>
+<div class="ln" style="left:445.8pt;top:454.3pt;width:1pt;height:208.9pt"></div>
+<div class="ln" style="left:475.3pt;top:454.3pt;width:1pt;height:233.7pt"></div>
+<div class="ln" style="left:48.6pt;top:479.2pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:76.7pt;top:480.2pt;width:1pt;height:207.7pt"></div>
+<div class="ln" style="left:106.2pt;top:480.2pt;width:1pt;height:207.7pt"></div>
+<div class="ln" style="left:504.8pt;top:480.2pt;width:1pt;height:207.7pt"></div>
+<div class="ln" style="left:534.3pt;top:480.2pt;width:1pt;height:207.7pt"></div>
+<div class="ln" style="left:48.6pt;top:505.2pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:48.6pt;top:527.6pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:48.6pt;top:550pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:48.6pt;top:572.5pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:48.6pt;top:594.9pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:209.6pt;top:595.9pt;width:1pt;height:21.5pt"></div>
+<div class="ln" style="left:48.6pt;top:617.4pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:209.6pt;top:618.3pt;width:1pt;height:21.5pt"></div>
+<div class="ln" style="left:48.6pt;top:639.8pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:209.6pt;top:640.8pt;width:1pt;height:21.5pt"></div>
+<div class="ln" style="left:48.6pt;top:662.3pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:48.6pt;top:687pt;width:514.8pt;height:1pt"></div>
+<div class="ln" style="left:209.6pt;top:687.9pt;width:1pt;height:73.2pt"></div>
+<div class="ln" style="left:61.9pt;top:699.3pt;width:1pt;height:13.3pt"></div>
+<div class="ln" style="left:62.9pt;top:699.3pt;width:29.5pt;height:1pt"></div>
+<div class="ln" style="left:91.5pt;top:700.3pt;width:1pt;height:12.4pt"></div>
+<div class="ln" style="left:62.9pt;top:711.7pt;width:29.5pt;height:1pt"></div>
+<div class="ln" style="left:136.7pt;top:711.7pt;width:426.7pt;height:1pt"></div>
+<div class="ln" style="left:61.9pt;top:736.4pt;width:1pt;height:13.3pt"></div>
+<div class="ln" style="left:62.9pt;top:736.4pt;width:29.5pt;height:1pt"></div>
+<div class="ln" style="left:136.7pt;top:736.4pt;width:426.7pt;height:1pt"></div>
+<div class="ln" style="left:91.5pt;top:737.4pt;width:1pt;height:12.4pt"></div>
+<div class="ln" style="left:62.9pt;top:748.8pt;width:29.5pt;height:1pt"></div>
+<div class="ln" style="left:48.6pt;top:761.2pt;width:516.7pt;height:1.9pt"></div>
+<div class="t" style="left:155.67pt;top:33.57pt;font-size:9.96pt;line-height:9.96pt;">MODEL</div>
+<div class="t" style="left:196.56pt;top:33.57pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+<div class="t" style="left:332.84pt;top:33.57pt;font-size:9.96pt;line-height:9.96pt;">DATE</div>
+<div class="t" style="left:362.24pt;top:33.57pt;font-size:9.96pt;line-height:9.96pt;">OF</div>
+<div class="t" style="left:378.89pt;top:33.57pt;font-size:9.96pt;line-height:9.96pt;">ISSUED</div>
+<div class="t" style="left:433.39pt;top:33.57pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+<div class="t b" style="left:67.94pt;top:34.29pt;font-size:27.96pt;line-height:27.96pt;">AAIJ</div>
+<div class="t" style="left:332.84pt;top:52.53pt;font-size:9.96pt;line-height:9.96pt;">REF.</div>
+<div class="t" style="left:358.28pt;top:52.53pt;font-size:9.96pt;line-height:9.96pt;">NO</div>
+<div class="t" style="left:433.39pt;top:52.53pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+<div class="t" style="left:215.45pt;top:70.91pt;font-size:9.96pt;line-height:9.96pt;">SUPPLIER</div>
+<div class="t" style="left:280.01pt;top:70.91pt;font-size:9.96pt;line-height:9.96pt;">MANUF.</div>
+<div class="t" style="left:52.33pt;top:71.39pt;font-size:9.96pt;line-height:9.96pt;">PART</div>
+<div class="t" style="left:81.72pt;top:71.39pt;font-size:9.96pt;line-height:9.96pt;">ROUTE</div>
+<div class="t" style="left:347.95pt;top:71.39pt;font-size:9.96pt;line-height:9.96pt;">MATERIAL</div>
+<div class="t" style="left:426.55pt;top:71.39pt;font-size:9.96pt;line-height:9.96pt;">GENERAL</div>
+<div class="t" style="left:476.86pt;top:71.39pt;font-size:9.96pt;line-height:9.96pt;">TOL</div>
+<div class="t" style="left:515.02pt;top:71.39pt;font-size:9.96pt;line-height:9.96pt;">WEIGHT</div>
+<div class="t b" style="left:269.09pt;top:154.54pt;font-size:36.76pt;line-height:36.76pt;letter-spacing:-3.04pt;">AAIJ</div>
+<div class="t b" style="left:205.49pt;top:197.77pt;font-size:18.44pt;line-height:18.44pt;letter-spacing:-1.37pt;">INSPECTION</div>
+<div class="t b" style="left:315.05pt;top:197.77pt;font-size:18.44pt;line-height:18.44pt;letter-spacing:-1.41pt;">STANDARD</div>
+<div class="t b" style="left:228.65pt;top:220.33pt;font-size:12.92pt;line-height:12.92pt;">(</div>
+<div class="t b" style="left:235.71pt;top:220.33pt;font-size:12.92pt;line-height:12.92pt;letter-spacing:-1.45pt;">FOR</div>
+<div class="t b" style="left:266.5pt;top:220.33pt;font-size:12.92pt;line-height:12.92pt;letter-spacing:-1.13pt;">PURCHASED</div>
+<div class="t b" style="left:345.69pt;top:220.33pt;font-size:12.92pt;line-height:12.92pt;letter-spacing:-0.98pt;">PART</div>
+<div class="t b" style="left:380.18pt;top:220.33pt;font-size:12.92pt;line-height:12.92pt;">)</div>
+<div class="t" style="left:153.14pt;top:261.93pt;font-size:12pt;line-height:12pt;">PART</div>
+<div class="t" style="left:191.97pt;top:261.93pt;font-size:12pt;line-height:12pt;">NO</div>
+<div class="t" style="left:241.73pt;top:261.93pt;font-size:12pt;line-height:12pt;">:</div>
+<div class="t" style="left:153.14pt;top:278.73pt;font-size:12pt;line-height:12pt;">PART</div>
+<div class="t" style="left:191.97pt;top:278.73pt;font-size:12pt;line-height:12pt;">NAME</div>
+<div class="t" style="left:241.73pt;top:278.73pt;font-size:12pt;line-height:12pt;">:</div>
+<div class="t" style="left:388.99pt;top:368.51pt;font-size:9pt;line-height:9pt;">Customer</div>
+<div class="t" style="left:430.7pt;top:368.51pt;font-size:9pt;line-height:9pt;">:</div>
+<div class="t" style="left:49.44pt;top:368.99pt;font-size:9pt;line-height:9pt;">Manufacturer</div>
+<div class="t" style="left:105.03pt;top:368.99pt;font-size:9pt;line-height:9pt;">:</div>
+<div class="t" style="left:182.3pt;top:368.99pt;font-size:9pt;line-height:9pt;">Supplier</div>
+<div class="t" style="left:217.99pt;top:368.99pt;font-size:9pt;line-height:9pt;">:</div>
+<div class="t" style="left:50.88pt;top:381.35pt;font-size:9pt;line-height:9pt;">Approved</div>
+<div class="t" style="left:96.62pt;top:381.35pt;font-size:9pt;line-height:9pt;">Checked</div>
+<div class="t" style="left:145.46pt;top:381.35pt;font-size:9pt;line-height:9pt;">Issued</div>
+<div class="t" style="left:183.74pt;top:381.35pt;font-size:9pt;line-height:9pt;">Approved</div>
+<div class="t" style="left:229.49pt;top:381.35pt;font-size:9pt;line-height:9pt;">Checked</div>
+<div class="t" style="left:278.33pt;top:381.35pt;font-size:9pt;line-height:9pt;">Issued</div>
+<div class="t" style="left:397.87pt;top:381.35pt;font-size:9pt;line-height:9pt;">Approved</div>
+<div class="t" style="left:458.38pt;top:381.35pt;font-size:9pt;line-height:9pt;">Checked</div>
+<div class="t" style="left:516.46pt;top:381.35pt;font-size:9pt;line-height:9pt;">Received</div>
+<div class="t" style="left:52.33pt;top:442.72pt;font-size:9.96pt;line-height:9.96pt;">REVISION</div>
+<div class="t" style="left:105.37pt;top:442.72pt;font-size:9.96pt;line-height:9.96pt;">COLUMN</div>
+<div class="t" style="left:450.34pt;top:457.59pt;font-size:6pt;line-height:6pt;">PCR/</div>
+<div class="t" style="left:52.08pt;top:458.62pt;font-size:8.04pt;line-height:8.04pt;">REVISION</div>
+<div class="t" style="left:92.5pt;top:458.62pt;font-size:8.04pt;line-height:8.04pt;">REQUEST</div>
+<div class="t" style="left:479.86pt;top:458.62pt;font-size:8.04pt;line-height:8.04pt;">REVISION</div>
+<div class="t" style="left:520.28pt;top:458.62pt;font-size:8.04pt;line-height:8.04pt;">REQUEST</div>
+<div class="t" style="left:138.86pt;top:460.95pt;font-size:6pt;line-height:6pt;">REVISE</div>
+<div class="t" style="left:177.62pt;top:462.7pt;font-size:8.04pt;line-height:8.04pt;">DATE</div>
+<div class="t" style="left:285.17pt;top:462.25pt;font-size:9pt;line-height:9pt;">REVISION</div>
+<div class="t" style="left:333.15pt;top:462.25pt;font-size:9pt;line-height:9pt;">RECORD</div>
+<div class="t" style="left:450.34pt;top:464.43pt;font-size:6pt;line-height:6pt;">ECR</div>
+<div class="t" style="left:141.26pt;top:467.79pt;font-size:6pt;line-height:6pt;">MARK</div>
+<div class="t" style="left:76.34pt;top:467.74pt;font-size:8.04pt;line-height:8.04pt;">AAIJ</div>
+<div class="t" style="left:95.4pt;top:467.74pt;font-size:8.04pt;line-height:8.04pt;">QA</div>
+<div class="t" style="left:499.54pt;top:467.74pt;font-size:8.04pt;line-height:8.04pt;">SUPPLIER</div>
+<div class="t" style="left:450.34pt;top:471.39pt;font-size:6pt;line-height:6pt;">NO.</div>
+<div class="t" style="left:55.08pt;top:664.48pt;font-size:9pt;line-height:9pt;">Div.</div>
+<div class="t" style="left:140.52pt;top:664.48pt;font-size:9pt;line-height:9pt;">DISTRIBUTE</div>
+<div class="t" style="left:196.33pt;top:664.48pt;font-size:9pt;line-height:9pt;">TO</div>
+<div class="t" style="left:211.21pt;top:664.48pt;font-size:9pt;line-height:9pt;">:</div>
+<div class="t" style="left:344.71pt;top:664.48pt;font-size:9pt;line-height:9pt;">DIVISION</div>
+<div class="t" style="left:386.69pt;top:664.48pt;font-size:9pt;line-height:9pt;">:</div>
+<div class="t" style="left:481.18pt;top:664.48pt;font-size:9pt;line-height:9pt;">Gen.</div>
+<div class="t" style="left:83.78pt;top:669.88pt;font-size:9pt;line-height:9pt;">Mgr.</div>
+<div class="t" style="left:111.5pt;top:670.48pt;font-size:9pt;line-height:9pt;">Spv.</div>
+<div class="t" style="left:511.9pt;top:669.88pt;font-size:9pt;line-height:9pt;">Mgr.</div>
+<div class="t" style="left:539.74pt;top:669.67pt;font-size:9.96pt;line-height:9.96pt;">Staff</div>
+<div class="t" style="left:53.88pt;top:676.84pt;font-size:9pt;line-height:9pt;">Mgr.</div>
+<div class="t" style="left:482.02pt;top:676.84pt;font-size:9pt;line-height:9pt;">Mgr.</div>
+<div class="t" style="left:153.98pt;top:694.84pt;font-size:9pt;line-height:9pt;">Customer</div>
+<div class="t" style="left:211.97pt;top:694.38pt;font-size:9.96pt;line-height:9.96pt;">AAIJ</div>
+<div class="t" style="left:235.73pt;top:694.38pt;font-size:9.96pt;line-height:9.96pt;">(PURCHASING</div>
+<div class="t" style="left:308.19pt;top:694.38pt;font-size:9.96pt;line-height:9.96pt;">&amp;</div>
+<div class="t" style="left:317.56pt;top:694.38pt;font-size:9.96pt;line-height:9.96pt;">QUALITY</div>
+<div class="t" style="left:362.9pt;top:694.38pt;font-size:9.96pt;line-height:9.96pt;">DIVISION)</div>
+<div class="t" style="left:99.4pt;top:701.1pt;font-size:9.96pt;line-height:9.96pt;">DRAFT</div>
+<div class="t" style="left:156.98pt;top:719.56pt;font-size:9pt;line-height:9pt;">Supplier</div>
+<div class="t" style="left:99.4pt;top:738.18pt;font-size:9.96pt;line-height:9.96pt;">FINAL</div>
+<div class="t" style="left:147.02pt;top:744.54pt;font-size:9pt;line-height:9pt;">Manufacturer</div>
+<div class="cell" style="left:204pt;top:34.1pt;width:122pt;height:10pt;font-size:10pt;line-height:10pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['model'] ?? '' }}</div>
+<div class="cell" style="left:441pt;top:34.1pt;width:120pt;height:10pt;font-size:10pt;line-height:10pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['dateIssued'] ?? '' }}</div>
+<div class="cell" style="left:441pt;top:53.1pt;width:120pt;height:10pt;font-size:10pt;line-height:10pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['refNo'] ?? '' }}</div>
+<div class="cell" style="left:48.6pt;top:86.2pt;width:161pt;height:36.5pt;font-size:9pt;line-height:36.5pt;text-align:center;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['partRoute'] ?? '' }}</div>
+<div class="cell" style="left:210.5pt;top:86.2pt;width:58.1pt;height:36.5pt;font-size:9pt;line-height:36.5pt;text-align:center;padding:0 2pt;white-space:nowrap;">{{ $supplierInfo['supplier'] ?? '' }}</div>
+<div class="cell" style="left:269.6pt;top:86.2pt;width:58.1pt;height:36.5pt;font-size:9pt;line-height:36.5pt;text-align:center;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['manufacturer'] ?? '' }}</div>
+<div class="cell" style="left:328.6pt;top:86.2pt;width:87.6pt;height:36.5pt;font-size:9pt;line-height:36.5pt;text-align:center;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['material'] ?? '' }}</div>
+<div class="cell" style="left:417.2pt;top:86.2pt;width:87.6pt;height:36.5pt;font-size:9pt;line-height:36.5pt;text-align:center;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['generalTolerance'] ?? '' }}</div>
+<div class="cell" style="left:505.8pt;top:86.2pt;width:57.6pt;height:36.5pt;font-size:9pt;line-height:36.5pt;text-align:center;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['weight'] ?? '' }}</div>
+<div class="cell" style="left:257pt;top:262.4pt;width:188pt;height:13.5pt;font-size:11pt;line-height:13.5pt;text-align:left;padding:0 3pt;white-space:nowrap;">{{ $generalInformation['partNo'] ?? '' }}</div>
+<div class="cell" style="left:257pt;top:279.2pt;width:188pt;height:13.5pt;font-size:11pt;line-height:13.5pt;text-align:left;padding:0 3pt;white-space:nowrap;">{{ $generalInformation['partName'] ?? '' }}</div>
+@php
+    // Baris REVISION COLUMN (8 baris). Isi lewat $revisions = [['date'=>..,'record'=>..], ...]
+    // atau (kompatibel lama) $generalInformation['revisionDate'] / ['revisionRecord'] untuk baris 1.
+    $revRows = [[480.2,25],[506.2,21.4],[528.6,21.4],[551,21.5],[573.5,21.4],[595.9,21.5],[618.4,21.4],[640.8,21.4]];
+    $revisions = $revisions ?? [];
+    if (empty($revisions) && (!empty($generalInformation['revisionDate']) || !empty($generalInformation['revisionRecord']))) {
+        $revisions = [['date' => $generalInformation['revisionDate'] ?? '', 'record' => $generalInformation['revisionRecord'] ?? '']];
+    }
+@endphp
+@foreach($revRows as $ri => $rr)
+<div class="cell" style="left:165.3pt;top:{{ $rr[0] }}pt;width:44.3pt;height:{{ $rr[1] }}pt;font-size:8pt;line-height:{{ $rr[1] }}pt;text-align:center;padding:0 2pt;white-space:nowrap;">{{ $revisions[$ri]['date'] ?? '' }}</div>
+<div class="cell" style="left:211pt;top:{{ $rr[0] }}pt;width:234pt;height:{{ $rr[1] }}pt;font-size:8pt;line-height:{{ $rr[1] }}pt;text-align:left;padding:0 3pt;white-space:nowrap;">{{ $revisions[$ri]['record'] ?? '' }}</div>
+@endforeach
+<div class="cell" style="left:212pt;top:687.9pt;width:350pt;height:23.8pt;font-size:10pt;line-height:23.8pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $supplierInfo['customer'] ?? 'AAIJ (PURCHASING & QUALITY DIVISION)' }}</div>
+<div class="cell" style="left:212pt;top:712.7pt;width:350pt;height:23.7pt;font-size:10pt;line-height:23.7pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $supplierInfo['supplier'] ?? '' }}</div>
+<div class="cell" style="left:212pt;top:737.4pt;width:350pt;height:23.8pt;font-size:10pt;line-height:23.8pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $supplierInfo['manufacturer'] ?? '' }}</div>
 </div>
 
-{{-- PAGE 2 — PART DRAWING --}}
-<div class="page">
-    {{-- PAGE 2 HEADER --}}
-    <table class="spacer-xs" style="width:100%; border-collapse: collapse;">
-        <tr>
-            <td rowspan="2" class="logo-cell" style="width: 12%;">AAIJ</td>
-            <td rowspan="2" style="width: 38%; font-weight: bold; font-size: 13px; text-align: center; vertical-align: middle; border: 1px solid #000; padding: 4px;">INSPECTION STANDARD</td>
-            <td class="header-label-cell" style="width: 12%;">MODEL :</td>
-            <td class="header-value-cell" style="width: 38%;">{{ $generalInformation['model'] ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="header-label-cell" style="width: 12%;">PART NO :</td>
-            <td class="header-value-cell" style="width: 38%;">{{ $generalInformation['partNo'] ?? '' }}</td>
-        </tr>
-    </table>
+{{-- ========== HALAMAN 2+ : PART DRAWING (1 DRAWING = 1 HALAMAN) ========== --}}
+@php 
+    $drawList = $drawings ?? []; 
+    $totalDrawings = count($drawList);
+@endphp
 
-    {{-- DRAWING FRAME --}}
-    <div class="drawing-frame">
-        <div class="dtitle">PART DRAWING :</div>
-        @if(count($drawings) > 0)
-            @foreach($drawings as $index => $drawing)
-            <div class="drawing-item">
-                <div class="drawing-info bold">Drawing {{ $index + 1 }}{{ $drawing['drawingName'] ? ': '.$drawing['drawingName'] : '' }}</div>
-                @if($drawing['filePath'] && file_exists($drawing['filePath']) && in_array($drawing['fileType'], ['jpg','jpeg','png']))
-                    <img src="{{ $drawing['filePath'] }}" class="drawing-image" alt="Drawing {{ $index + 1 }}">
-                @elseif($drawing['fileType'] === 'pdf')
-                    <div style="text-align: center; padding: 12px; background: #f5f5f5; border: 1px dashed #999; margin: 4px 0; font-size: 10px;">
-                        [PDF Document: {{ $drawing['originalFilename'] }}]
-                    </div>
-                @endif
-                @if($drawing['drawingNo'])
-                    <div class="drawing-info"><span class="drawing-label">Drawing No:</span>{{ $drawing['drawingNo'] }}</div>
-                @endif
-                @if($drawing['revision'])
-                    <div class="drawing-info"><span class="drawing-label">Revision:</span>{{ $drawing['revision'] }}</div>
-                @endif
-                @if($drawing['description'])
-                    <div class="drawing-info"><span class="drawing-label">Description:</span>{{ $drawing['description'] }}</div>
-                @endif
-            </div>
-            @endforeach
-        @else
-            <p style="text-align: center; color: #000; padding: 40px 0; font-size: 11px;">No drawings uploaded</p>
+@if($totalDrawings > 0)
+    @foreach($drawList as $drawIndex => $drawing)
+    <div class="page" style="page-break-after: always;">
+    <div class="ln" style="left:46.7pt;top:20pt;width:1.9pt;height:751pt"></div>
+    <div class="ln" style="left:48.6pt;top:20pt;width:516.7pt;height:1.9pt"></div>
+    <div class="ln" style="left:180pt;top:22pt;width:1pt;height:43.3pt"></div>
+    <div class="ln" style="left:371.9pt;top:22pt;width:1pt;height:43.3pt"></div>
+    <div class="ln" style="left:563.4pt;top:22pt;width:1.9pt;height:749pt"></div>
+    <div class="ln" style="left:48.6pt;top:64.3pt;width:514.8pt;height:1pt"></div>
+    <div class="ln" style="left:48.6pt;top:676.7pt;width:514.8pt;height:1pt"></div>
+    <div class="ln" style="left:135.7pt;top:677.6pt;width:1pt;height:91.5pt"></div>
+    <div class="ln" style="left:224.3pt;top:677.6pt;width:1pt;height:91.5pt"></div>
+    <div class="ln" style="left:431pt;top:677.6pt;width:1pt;height:91.5pt"></div>
+    <div class="ln" style="left:48.6pt;top:694.9pt;width:514.8pt;height:1pt"></div>
+    <div class="ln" style="left:91.5pt;top:695.9pt;width:1pt;height:73.2pt"></div>
+    <div class="ln" style="left:180pt;top:695.9pt;width:1pt;height:73.2pt"></div>
+    <div class="ln" style="left:475.3pt;top:695.9pt;width:1pt;height:73.2pt"></div>
+    <div class="ln" style="left:519.6pt;top:695.9pt;width:1pt;height:73.2pt"></div>
+    <div class="ln" style="left:225.3pt;top:719.6pt;width:206.7pt;height:1pt"></div>
+    <div class="ln" style="left:48.6pt;top:744.3pt;width:514.8pt;height:1pt"></div>
+    <div class="ln" style="left:48.6pt;top:769.1pt;width:516.7pt;height:1.9pt"></div>
+    <div class="t" style="left:185.19pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">MODEL</div>
+    <div class="t" style="left:226.73pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+    <div class="t" style="left:377.12pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">PART</div>
+    <div class="t" style="left:409.28pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">NO</div>
+    <div class="t" style="left:427.02pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+    <div class="t b" style="left:73.46pt;top:24.97pt;font-size:36pt;line-height:36pt;">AAIJ</div>
+    <div class="t b" style="left:216.53pt;top:52.33pt;font-size:11.04pt;line-height:11.04pt;letter-spacing:-0.81pt;">INSPECTION</div>
+    <div class="t b" style="left:282.24pt;top:52.33pt;font-size:11.04pt;line-height:11.04pt;letter-spacing:-0.86pt;">STANDARD</div>
+    <div class="t" style="left:64.34pt;top:85.07pt;font-size:9.96pt;line-height:9.96pt;">PART</div>
+    <div class="t" style="left:93.75pt;top:85.07pt;font-size:9.96pt;line-height:9.96pt;">DRAWING</div>
+    @if($totalDrawings > 1)
+    <div class="t" style="left:145.21pt;top:85.07pt;font-size:9.96pt;line-height:9.96pt;">{{ $drawIndex + 1 }}/{{ $totalDrawings }}</div>
+    @endif
+    <div class="t b" style="left:54.24pt;top:681.4pt;font-size:9pt;line-height:9pt;">MANUFACTURER</div>
+    <div class="t b" style="left:158.42pt;top:681.4pt;font-size:9pt;line-height:9pt;">SUPPLIER</div>
+    <div class="t" style="left:234.14pt;top:681.76pt;font-size:9pt;line-height:9pt;">DISTRIBUTE</div>
+    <div class="t" style="left:289.95pt;top:681.76pt;font-size:9pt;line-height:9pt;">TO</div>
+    <div class="t" style="left:304.83pt;top:681.76pt;font-size:9pt;line-height:9pt;">:</div>
+    <div class="t" style="left:309.86pt;top:681.76pt;font-size:9pt;line-height:9pt;">DIVISION</div>
+    <div class="t b" style="left:477.58pt;top:681.4pt;font-size:9pt;line-height:9pt;">AAIJ</div>
+    <div class="t b" style="left:500.36pt;top:681.4pt;font-size:9pt;line-height:9pt;">-</div>
+    <div class="t b" style="left:505.88pt;top:681.4pt;font-size:9pt;line-height:9pt;">QA</div>
+    <div class="t" style="left:226.61pt;top:702.76pt;font-size:9pt;line-height:9pt;">Customer</div>
+    <div class="t" style="left:285.65pt;top:702.76pt;font-size:9pt;line-height:9pt;">:</div>
+    <div class="t" style="left:290.68pt;top:702.76pt;font-size:9pt;line-height:9pt;">AAIJ</div>
+    <div class="t" style="left:312.25pt;top:702.76pt;font-size:9pt;line-height:9pt;">(PUR</div>
+    <div class="t" style="left:336.75pt;top:702.76pt;font-size:9pt;line-height:9pt;">&amp;</div>
+    <div class="t" style="left:345.26pt;top:702.76pt;font-size:9pt;line-height:9pt;">QUALITY</div>
+    <div class="t" style="left:386.04pt;top:702.76pt;font-size:9pt;line-height:9pt;">DIV)</div>
+    <div class="t" style="left:226.61pt;top:727.48pt;font-size:9pt;line-height:9pt;">Supplier</div>
+    <div class="t" style="left:285.65pt;top:727.48pt;font-size:9pt;line-height:9pt;">:</div>
+    <div class="t" style="left:50.88pt;top:752.46pt;font-size:9pt;line-height:9pt;">Approved</div>
+    <div class="t" style="left:101.18pt;top:752.46pt;font-size:9pt;line-height:9pt;">Issued</div>
+    <div class="t" style="left:139.46pt;top:752.46pt;font-size:9pt;line-height:9pt;">Approved</div>
+    <div class="t" style="left:189.74pt;top:752.46pt;font-size:9pt;line-height:9pt;">Issued</div>
+    <div class="t" style="left:226.61pt;top:752.46pt;font-size:9pt;line-height:9pt;">Manufacturer</div>
+    <div class="t" style="left:285.65pt;top:752.46pt;font-size:9pt;line-height:9pt;">:</div>
+    <div class="t" style="left:434.71pt;top:752.46pt;font-size:9pt;line-height:9pt;">Approved</div>
+    <div class="t" style="left:480.46pt;top:752.46pt;font-size:9pt;line-height:9pt;">Checked</div>
+    <div class="t" style="left:523.78pt;top:752.46pt;font-size:9pt;line-height:9pt;">Received</div>
+    <div class="cell" style="left:233pt;top:24.1pt;width:136pt;height:10pt;font-size:10pt;line-height:10pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['model'] ?? '' }}</div>
+    <div class="cell" style="left:433pt;top:24.1pt;width:130pt;height:10pt;font-size:10pt;line-height:10pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['partNo'] ?? '' }}</div>
+    
+    {{-- AREA DRAWING - FULL PAGE (572pt height available) --}}
+    <div class="cell" style="left:60pt;top:104pt;width:492pt;height:566pt;text-align:center;">
+        <div style="margin-bottom:12pt;text-align:left;">
+            <div class="dinfo b" style="font-size:11pt;">Drawing {{ $drawIndex + 1 }}@if($totalDrawings > 1) of {{ $totalDrawings }}@endif{{ !empty($drawing['drawingName']) ? ': '.$drawing['drawingName'] : '' }}</div>
+        </div>
+        
+        @if(!empty($drawing['filePath']) && is_file($drawing['filePath']) && in_array($drawing['fileType'] ?? '', ['jpg','jpeg','png']))
+            @php
+                // Convert image to base64 for PDF rendering
+                try {
+                    $imageData = @file_get_contents($drawing['filePath']);
+                    if ($imageData !== false) {
+                        $mimeType = 'image/' . ($drawing['fileType'] ?? 'jpeg');
+                        $imageSrc = 'data:' . $mimeType . ';base64,' . base64_encode($imageData);
+                    } else {
+                        $imageSrc = null;
+                    }
+                } catch (\Exception $e) {
+                    $imageSrc = null;
+                }
+            @endphp
+            @if($imageSrc)
+            <img src="{{ $imageSrc }}" class="dimg" style="max-width:492pt; max-height:480pt; margin:8pt auto;" alt="Drawing {{ $drawIndex + 1 }}">
+            @else
+            <div class="dinfo" style="text-align:center; padding:8pt; border:1px dashed #000; margin:4pt 0;">[Image file could not be loaded]</div>
+            @endif
+        @elseif(($drawing['fileType'] ?? '') === 'pdf')
+            <div class="dinfo" style="text-align:center; padding:8pt; border:1px dashed #000; margin:4pt 0;">[PDF Document: {{ $drawing['originalFilename'] ?? '' }}]</div>
         @endif
+        
+        <div style="margin-top:8pt;text-align:left;">
+            @if(!empty($drawing['drawingNo']))<div class="dinfo"><span class="dlbl">Drawing No:</span>{{ $drawing['drawingNo'] }}</div>@endif
+            @if(!empty($drawing['revision']))<div class="dinfo"><span class="dlbl">Revision:</span>{{ $drawing['revision'] }}</div>@endif
+            @if(!empty($drawing['description']))<div class="dinfo"><span class="dlbl">Description:</span>{{ $drawing['description'] }}</div>@endif
+        </div>
     </div>
+    </div>
+    @endforeach
+@else
+    {{-- Fallback: If no drawings, show empty drawing page --}}
+    <div class="page" style="page-break-after: always;">
+    <div class="ln" style="left:46.7pt;top:20pt;width:1.9pt;height:751pt"></div>
+    <div class="ln" style="left:48.6pt;top:20pt;width:516.7pt;height:1.9pt"></div>
+    <div class="ln" style="left:180pt;top:22pt;width:1pt;height:43.3pt"></div>
+    <div class="ln" style="left:371.9pt;top:22pt;width:1pt;height:43.3pt"></div>
+    <div class="ln" style="left:563.4pt;top:22pt;width:1.9pt;height:749pt"></div>
+    <div class="ln" style="left:48.6pt;top:64.3pt;width:514.8pt;height:1pt"></div>
+    <div class="ln" style="left:48.6pt;top:676.7pt;width:514.8pt;height:1pt"></div>
+    <div class="ln" style="left:135.7pt;top:677.6pt;width:1pt;height:91.5pt"></div>
+    <div class="ln" style="left:224.3pt;top:677.6pt;width:1pt;height:91.5pt"></div>
+    <div class="ln" style="left:431pt;top:677.6pt;width:1pt;height:91.5pt"></div>
+    <div class="ln" style="left:48.6pt;top:694.9pt;width:514.8pt;height:1pt"></div>
+    <div class="ln" style="left:91.5pt;top:695.9pt;width:1pt;height:73.2pt"></div>
+    <div class="ln" style="left:180pt;top:695.9pt;width:1pt;height:73.2pt"></div>
+    <div class="ln" style="left:475.3pt;top:695.9pt;width:1pt;height:73.2pt"></div>
+    <div class="ln" style="left:519.6pt;top:695.9pt;width:1pt;height:73.2pt"></div>
+    <div class="ln" style="left:225.3pt;top:719.6pt;width:206.7pt;height:1pt"></div>
+    <div class="ln" style="left:48.6pt;top:744.3pt;width:514.8pt;height:1pt"></div>
+    <div class="ln" style="left:48.6pt;top:769.1pt;width:516.7pt;height:1.9pt"></div>
+    <div class="t" style="left:185.19pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">MODEL</div>
+    <div class="t" style="left:226.73pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+    <div class="t" style="left:377.12pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">PART</div>
+    <div class="t" style="left:409.28pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">NO</div>
+    <div class="t" style="left:427.02pt;top:23.49pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+    <div class="t b" style="left:73.46pt;top:24.97pt;font-size:36pt;line-height:36pt;">AAIJ</div>
+    <div class="t b" style="left:216.53pt;top:52.33pt;font-size:11.04pt;line-height:11.04pt;letter-spacing:-0.81pt;">INSPECTION</div>
+    <div class="t b" style="left:282.24pt;top:52.33pt;font-size:11.04pt;line-height:11.04pt;letter-spacing:-0.86pt;">STANDARD</div>
+    <div class="t" style="left:64.34pt;top:85.07pt;font-size:9.96pt;line-height:9.96pt;">PART</div>
+    <div class="t" style="left:93.75pt;top:85.07pt;font-size:9.96pt;line-height:9.96pt;">DRAWING</div>
+    <div class="t" style="left:145.21pt;top:85.07pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+    <div class="t b" style="left:54.24pt;top:681.4pt;font-size:9pt;line-height:9pt;">MANUFACTURER</div>
+    <div class="t b" style="left:158.42pt;top:681.4pt;font-size:9pt;line-height:9pt;">SUPPLIER</div>
+    <div class="t" style="left:234.14pt;top:681.76pt;font-size:9pt;line-height:9pt;">DISTRIBUTE</div>
+    <div class="t" style="left:289.95pt;top:681.76pt;font-size:9pt;line-height:9pt;">TO</div>
+    <div class="t" style="left:304.83pt;top:681.76pt;font-size:9pt;line-height:9pt;">:</div>
+    <div class="t" style="left:309.86pt;top:681.76pt;font-size:9pt;line-height:9pt;">DIVISION</div>
+    <div class="t b" style="left:477.58pt;top:681.4pt;font-size:9pt;line-height:9pt;">AAIJ</div>
+    <div class="t b" style="left:500.36pt;top:681.4pt;font-size:9pt;line-height:9pt;">-</div>
+    <div class="t b" style="left:505.88pt;top:681.4pt;font-size:9pt;line-height:9pt;">QA</div>
+    <div class="t" style="left:226.61pt;top:702.76pt;font-size:9pt;line-height:9pt;">Customer</div>
+    <div class="t" style="left:285.65pt;top:702.76pt;font-size:9pt;line-height:9pt;">:</div>
+    <div class="t" style="left:290.68pt;top:702.76pt;font-size:9pt;line-height:9pt;">AAIJ</div>
+    <div class="t" style="left:312.25pt;top:702.76pt;font-size:9pt;line-height:9pt;">(PUR</div>
+    <div class="t" style="left:336.75pt;top:702.76pt;font-size:9pt;line-height:9pt;">&amp;</div>
+    <div class="t" style="left:345.26pt;top:702.76pt;font-size:9pt;line-height:9pt;">QUALITY</div>
+    <div class="t" style="left:386.04pt;top:702.76pt;font-size:9pt;line-height:9pt;">DIV)</div>
+    <div class="t" style="left:226.61pt;top:727.48pt;font-size:9pt;line-height:9pt;">Supplier</div>
+    <div class="t" style="left:285.65pt;top:727.48pt;font-size:9pt;line-height:9pt;">:</div>
+    <div class="t" style="left:50.88pt;top:752.46pt;font-size:9pt;line-height:9pt;">Approved</div>
+    <div class="t" style="left:101.18pt;top:752.46pt;font-size:9pt;line-height:9pt;">Issued</div>
+    <div class="t" style="left:139.46pt;top:752.46pt;font-size:9pt;line-height:9pt;">Approved</div>
+    <div class="t" style="left:189.74pt;top:752.46pt;font-size:9pt;line-height:9pt;">Issued</div>
+    <div class="t" style="left:226.61pt;top:752.46pt;font-size:9pt;line-height:9pt;">Manufacturer</div>
+    <div class="t" style="left:285.65pt;top:752.46pt;font-size:9pt;line-height:9pt;">:</div>
+    <div class="t" style="left:434.71pt;top:752.46pt;font-size:9pt;line-height:9pt;">Approved</div>
+    <div class="t" style="left:480.46pt;top:752.46pt;font-size:9pt;line-height:9pt;">Checked</div>
+    <div class="t" style="left:523.78pt;top:752.46pt;font-size:9pt;line-height:9pt;">Received</div>
+    <div class="cell" style="left:233pt;top:24.1pt;width:136pt;height:10pt;font-size:10pt;line-height:10pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['model'] ?? '' }}</div>
+    <div class="cell" style="left:433pt;top:24.1pt;width:130pt;height:10pt;font-size:10pt;line-height:10pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['partNo'] ?? '' }}</div>
+    <div class="cell" style="left:60pt;top:104pt;width:492pt;height:566pt;text-align:center;line-height:566pt;font-size:12pt;color:#999;">[No drawings uploaded]</div>
+    </div>
+@endif
 
-    @include('inspection-standard.pdf.partials.approval-footer', ['qaLabel' => 'AAIJ - QA'])
-
-    <div class="footer">Page 2 of 3 | Generated: {{ $generatedAt }}</div>
+{{-- ========== HALAMAN 3+ : INSPECTION ITEMS (lanjut otomatis tiap 8 item) ========== --}}
+{{-- Otomatis lanjut halaman baru setiap 8 item --}}
+@php
+    $chunks = array_chunk(array_values($inspectionItems ?? []), 8);
+    if (empty($chunks)) { $chunks = [[]]; }
+    // [top, tinggi] 8 baris  (diukur dari garis horizontal PDF)
+    $rows = [[106.7,69.2],[176.9,83.3],[261.2,69.2],[331.4,55.2],[387.5,55.3],[443.7,55.2],[499.9,83.3],[584.1,80]];
+    // [left, lebar, align, key]  (7 kolom)
+    $cols = [[47.5,131.5,'left','inspectionItem'],[179.9,54.4,'left','inspectionInstrument'],[235.2,66,'left','inspectionCriterion'],
+             [302.2,26.7,'center','rank'],[329.8,43.3,'center','supplierSampling'],[374.1,43.3,'center','aaijSampling'],
+             [418.4,146.2,'left','remarkInspectionMethod']];
+@endphp
+@foreach($chunks as $chunk)
+<div class="page"@if(!$loop->last) style="page-break-after: always;"@endif>
+<div class="ln" style="left:45.6pt;top:32.8pt;width:1.9pt;height:725.6pt"></div>
+<div class="ln" style="left:47.5pt;top:32.8pt;width:519pt;height:1.9pt"></div>
+<div class="ln" style="left:178.9pt;top:34.7pt;width:1pt;height:42.5pt"></div>
+<div class="ln" style="left:373.1pt;top:34.7pt;width:1pt;height:42.5pt"></div>
+<div class="ln" style="left:564.6pt;top:34.7pt;width:1.9pt;height:723.7pt"></div>
+<div class="ln" style="left:47.5pt;top:77.2pt;width:519pt;height:1.9pt"></div>
+<div class="ln" style="left:178.9pt;top:79.1pt;width:1pt;height:585.9pt"></div>
+<div class="ln" style="left:234.3pt;top:79.1pt;width:1pt;height:585.9pt"></div>
+<div class="ln" style="left:301.2pt;top:79.1pt;width:1pt;height:585.9pt"></div>
+<div class="ln" style="left:328.9pt;top:79.1pt;width:1pt;height:585.9pt"></div>
+<div class="ln" style="left:373.1pt;top:79.1pt;width:1pt;height:585.9pt"></div>
+<div class="ln" style="left:417.4pt;top:79.1pt;width:1pt;height:585.9pt"></div>
+<div class="ln" style="left:47.5pt;top:105.7pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:175.9pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:260.2pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:330.4pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:386.6pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:442.8pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:498.9pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:583.2pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:664.1pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:134.7pt;top:665pt;width:1pt;height:91.5pt"></div>
+<div class="ln" style="left:223.2pt;top:665pt;width:1pt;height:91.5pt"></div>
+<div class="ln" style="left:432.2pt;top:665pt;width:1pt;height:91.5pt"></div>
+<div class="ln" style="left:47.5pt;top:682.3pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:90.4pt;top:683.3pt;width:1pt;height:73.2pt"></div>
+<div class="ln" style="left:178.9pt;top:683.3pt;width:1pt;height:73.2pt"></div>
+<div class="ln" style="left:476.5pt;top:683.3pt;width:1pt;height:73.2pt"></div>
+<div class="ln" style="left:520.8pt;top:683.3pt;width:1pt;height:73.2pt"></div>
+<div class="ln" style="left:224.2pt;top:707pt;width:208.9pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:731.7pt;width:517.1pt;height:1pt"></div>
+<div class="ln" style="left:47.5pt;top:756.5pt;width:519pt;height:1.9pt"></div>
+<div class="t" style="left:184.11pt;top:36.21pt;font-size:9.96pt;line-height:9.96pt;">MODEL</div>
+<div class="t" style="left:225.65pt;top:36.21pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+<div class="t" style="left:378.32pt;top:36.21pt;font-size:9.96pt;line-height:9.96pt;">PART</div>
+<div class="t" style="left:410.48pt;top:36.21pt;font-size:9.96pt;line-height:9.96pt;">NO</div>
+<div class="t" style="left:428.22pt;top:36.21pt;font-size:9.96pt;line-height:9.96pt;">:</div>
+<div class="t b" style="left:72.38pt;top:38.05pt;font-size:36pt;line-height:36pt;">AAIJ</div>
+<div class="t b" style="left:216.53pt;top:64.93pt;font-size:11.04pt;line-height:11.04pt;letter-spacing:-0.81pt;">INSPECTION</div>
+<div class="t b" style="left:282.24pt;top:64.93pt;font-size:11.04pt;line-height:11.04pt;letter-spacing:-0.86pt;">STANDARD</div>
+<div class="t" style="left:181.82pt;top:80.69pt;font-size:8.04pt;line-height:8.04pt;">INSPECTION</div>
+<div class="t" style="left:242.93pt;top:81.17pt;font-size:8.04pt;line-height:8.04pt;">INSPECTION</div>
+<div class="t" style="left:331.99pt;top:80.69pt;font-size:8.04pt;line-height:8.04pt;">SUPPLIER</div>
+<div class="t" style="left:387.67pt;top:80.69pt;font-size:8.04pt;line-height:8.04pt;">AAIJ</div>
+<div class="t" style="left:475.06pt;top:80.69pt;font-size:8.04pt;line-height:8.04pt;">REMARK</div>
+<div class="t" style="left:76.94pt;top:87.65pt;font-size:8.04pt;line-height:8.04pt;">INSPECTION</div>
+<div class="t" style="left:130.67pt;top:87.65pt;font-size:8.04pt;line-height:8.04pt;">ITEM</div>
+<div class="t" style="left:304.85pt;top:87.65pt;font-size:8.04pt;line-height:8.04pt;">RANK</div>
+<div class="t" style="left:181.22pt;top:94.73pt;font-size:8.04pt;line-height:8.04pt;">INSTRUMENT</div>
+<div class="t" style="left:246.65pt;top:95.21pt;font-size:8.04pt;line-height:8.04pt;">CRITERION</div>
+<div class="t" style="left:331.15pt;top:94.73pt;font-size:8.04pt;line-height:8.04pt;">SAMPLING</div>
+<div class="t" style="left:375.43pt;top:94.73pt;font-size:8.04pt;line-height:8.04pt;">SAMPLING</div>
+<div class="t" style="left:442.99pt;top:94.73pt;font-size:8.04pt;line-height:8.04pt;">(</div>
+<div class="t" style="left:447.9pt;top:94.73pt;font-size:8.04pt;line-height:8.04pt;">INSPECTION</div>
+<div class="t" style="left:501.63pt;top:94.73pt;font-size:8.04pt;line-height:8.04pt;">METHOD</div>
+<div class="t" style="left:538.58pt;top:94.73pt;font-size:8.04pt;line-height:8.04pt;">)</div>
+<div class="t b" style="left:53.16pt;top:668.8pt;font-size:9pt;line-height:9pt;">MANUFACTURER</div>
+<div class="t b" style="left:157.34pt;top:668.8pt;font-size:9pt;line-height:9pt;">SUPPLIER</div>
+<div class="t b" style="left:481.54pt;top:668.8pt;font-size:9pt;line-height:9pt;">AAIJ</div>
+<div class="t b" style="left:504.32pt;top:668.8pt;font-size:9pt;line-height:9pt;">QA</div>
+<div class="t" style="left:233.06pt;top:669.16pt;font-size:9pt;line-height:9pt;">DISTRIBUTE</div>
+<div class="t" style="left:288.87pt;top:669.16pt;font-size:9pt;line-height:9pt;">TO</div>
+<div class="t" style="left:303.75pt;top:669.16pt;font-size:9pt;line-height:9pt;">:</div>
+<div class="t" style="left:308.78pt;top:669.16pt;font-size:9pt;line-height:9pt;">DIVISION</div>
+<div class="t" style="left:225.53pt;top:690.16pt;font-size:9pt;line-height:9pt;">Customer</div>
+<div class="t" style="left:288.77pt;top:690.16pt;font-size:9pt;line-height:9pt;">:</div>
+<div class="t" style="left:293.8pt;top:690.16pt;font-size:9pt;line-height:9pt;">AAIJ</div>
+<div class="t" style="left:315.37pt;top:690.16pt;font-size:9pt;line-height:9pt;">(PUR</div>
+<div class="t" style="left:339.87pt;top:690.16pt;font-size:9pt;line-height:9pt;">&amp;</div>
+<div class="t" style="left:348.38pt;top:690.16pt;font-size:9pt;line-height:9pt;">QUALITY</div>
+<div class="t" style="left:389.16pt;top:690.16pt;font-size:9pt;line-height:9pt;">DIV)</div>
+<div class="t" style="left:225.53pt;top:714.88pt;font-size:9pt;line-height:9pt;">Supplier</div>
+<div class="t" style="left:288.77pt;top:714.88pt;font-size:9pt;line-height:9pt;">:</div>
+<div class="t" style="left:49.8pt;top:739.84pt;font-size:9pt;line-height:9pt;">Approved</div>
+<div class="t" style="left:100.1pt;top:739.84pt;font-size:9pt;line-height:9pt;">Issued</div>
+<div class="t" style="left:138.38pt;top:739.84pt;font-size:9pt;line-height:9pt;">Approved</div>
+<div class="t" style="left:188.66pt;top:739.84pt;font-size:9pt;line-height:9pt;">Issued</div>
+<div class="t" style="left:225.53pt;top:739.84pt;font-size:9pt;line-height:9pt;">Manufacturer</div>
+<div class="t" style="left:288.77pt;top:739.84pt;font-size:9pt;line-height:9pt;">:</div>
+<div class="t" style="left:435.91pt;top:739.84pt;font-size:9pt;line-height:9pt;">Approved</div>
+<div class="t" style="left:481.66pt;top:739.84pt;font-size:9pt;line-height:9pt;">Checked</div>
+<div class="t" style="left:524.98pt;top:739.84pt;font-size:9pt;line-height:9pt;">Received</div>
+<div class="cell" style="left:232pt;top:36.8pt;width:140pt;height:10pt;font-size:10pt;line-height:10pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['model'] ?? '' }}</div>
+<div class="cell" style="left:434pt;top:36.8pt;width:129pt;height:10pt;font-size:10pt;line-height:10pt;text-align:left;padding:0 2pt;white-space:nowrap;">{{ $generalInformation['partNo'] ?? '' }}</div>
+@foreach($rows as $ri => $r)
+    @foreach($cols as $c)
+<div class="cell" style="left:{{ $c[0] }}pt;top:{{ $r[0] }}pt;width:{{ $c[1] }}pt;height:{{ $r[1] }}pt;font-size:8.5pt;line-height:10.2pt;text-align:{{ $c[2] }};padding:2.5pt 3pt 0 3pt;white-space:normal;">{{ $chunk[$ri][$c[3]] ?? '' }}</div>
+    @endforeach
+@endforeach
 </div>
-
-{{-- PAGE 3 — INSPECTION ITEMS --}}
-<div class="page">
-    {{-- PAGE 3 HEADER --}}
-    <table class="spacer-xs" style="width:100%; border-collapse: collapse;">
-        <tr>
-            <td rowspan="2" class="logo-cell" style="width: 12%;">AAIJ</td>
-            <td rowspan="2" style="width: 38%; font-weight: bold; font-size: 13px; text-align: center; vertical-align: middle; border: 1px solid #000; padding: 4px;">INSPECTION STANDARD</td>
-            <td class="header-label-cell" style="width: 12%;">MODEL :</td>
-            <td class="header-value-cell" style="width: 38%;">{{ $generalInformation['model'] ?? '' }}</td>
-        </tr>
-        <tr>
-            <td class="header-label-cell" style="width: 12%;">PART NO :</td>
-            <td class="header-value-cell" style="width: 38%;">{{ $generalInformation['partNo'] ?? '' }}</td>
-        </tr>
-    </table>
-
-    {{-- INSPECTION ITEMS TABLE --}}
-    <table class="inspection-table spacer-xs">
-        <thead>
-            <tr>
-                <th rowspan="2" class="col-no">No</th>
-                <th rowspan="2" class="col-item">INSPECTION ITEM</th>
-                <th rowspan="2" class="col-instr">INSPECTION<br>INSTRUMENT</th>
-                <th rowspan="2" class="col-crit">INSPECTION<br>CRITERION</th>
-                <th rowspan="2" class="col-rank">RANK</th>
-                <th colspan="2" style="width: 18%;">SAMPLING</th>
-                <th rowspan="2" class="col-rmk">REMARK<br>(INSPECTION METHOD)</th>
-            </tr>
-            <tr>
-                <th class="col-samp">SUPPLIER</th>
-                <th class="col-samp">AAIJ</th>
-            </tr>
-        </thead>
-        <tbody>
-            @php $rowCount = max(count($inspectionItems), 12); @endphp
-            @for($i = 0; $i < $rowCount; $i++)
-                @php $item = $inspectionItems[$i] ?? null; @endphp
-                <tr>
-                    <td class="col-no">{{ $i + 1 }}</td>
-                    <td class="col-item">{{ $item['inspectionItem'] ?? '' }}</td>
-                    <td class="col-instr">{{ $item['inspectionInstrument'] ?? '' }}</td>
-                    <td class="col-crit">{{ $item['inspectionCriterion'] ?? '' }}</td>
-                    <td class="col-rank">{{ $item['rank'] ?? '' }}</td>
-                    <td class="col-samp">{{ $item['supplierSampling'] ?? '' }}</td>
-                    <td class="col-samp">{{ $item['aaijSampling'] ?? '' }}</td>
-                    <td class="col-rmk">{{ $item['remarkInspectionMethod'] ?? '' }}</td>
-                </tr>
-            @endfor
-        </tbody>
-    </table>
-
-    @include('inspection-standard.pdf.partials.approval-footer', ['qaLabel' => 'AAIJ QA'])
-
-    <div class="footer">Page 3 of 3 | Generated: {{ $generatedAt }}</div>
-</div>
-
+@endforeach
 </body>
 </html>

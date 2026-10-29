@@ -14,11 +14,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        // Seed document types, revision configs, dan suppliers
+        // Seed document types, revision configs, suppliers, dan employees
         $this->call([
             DocumentTypeSeeder::class,
             RevisionConfigSeeder::class,
             SupplierSeeder::class,
+            EmployeeSeeder::class,
         ]);
     }
 }

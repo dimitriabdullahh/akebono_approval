@@ -2,12 +2,76 @@
 
 @section('title', 'Inspection Standard (IS)')
 
+@push('styles')
+<style>
+    /* Fix for inspection items table overflow */
+    #inspectionItemsTable {
+        table-layout: auto;
+        width: 100%;
+    }
+    
+    #inspectionItemsTable th,
+    #inspectionItemsTable td {
+        white-space: nowrap;
+    }
+    
+    #inspectionItemsTable input.form-control-sm {
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Ensure card doesn't overflow */
+    .card {
+        overflow: hidden;
+    }
+    
+    /* Compact button in table */
+    #inspectionItemsTable .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="container py-4">
     <!-- Header -->
     <div class="row mb-4">
         <div class="col-12">
             <h3 class="mb-3">Inspection Standard (IS) Form</h3>
+        </div>
+    </div>
+
+    <!-- Revision Alert Banner (only show if document is in revision status) -->
+    <div id="revisionBanner" class="alert alert-warning border-warning" style="display: none; border-left: 4px solid #FFA500;">
+        <div class="d-flex align-items-start">
+            <div class="flex-shrink-0">
+                <i class="ti ti-alert-triangle" style="font-size: 2rem; color: #FFA500;"></i>
+            </div>
+            <div class="flex-grow-1 ms-3">
+                <h5 class="alert-heading mb-2">
+                    <i class="ti ti-pencil"></i> Dokumen Perlu Direvisi
+                </h5>
+                <p class="mb-2">
+                    <strong>Direvisi oleh:</strong> <span id="revisionTeam"></span>
+                </p>
+                <p class="mb-2">
+                    <strong>Catatan Revisi:</strong><br>
+                    <span id="revisionNote" class="text-dark"></span>
+                </p>
+                <p class="mb-0 text-muted small">
+                    <i class="ti ti-clock"></i> <span id="revisionDate"></span>
+                </p>
+                <hr class="my-2">
+                <p class="mb-0 small">
+                    <i class="ti ti-info-circle"></i> Silakan perbaiki dokumen sesuai catatan di atas, kemudian klik <strong>Submit</strong> untuk mengirim ulang.
+                </p>
+            </div>
         </div>
     </div>
 
@@ -26,7 +90,6 @@
                     <div class="col-md-6 mb-3">
                         <label for="model" class="form-label">Model <span class="text-danger">*</span></label>
                         <input type="text" class="form-control bg-light" id="model" name="model" required readonly placeholder="Auto-populated">
-                        <small class="form-text text-muted">Auto-populated from request</small>
                     </div>
 
                     <!-- Date of Issued -->
@@ -44,28 +107,25 @@
                     <!-- Part Route -->
                     <div class="col-md-6 mb-3">
                         <label for="part_route" class="form-label">Part Route</label>
-                        <input type="text" class="form-control" id="part_route" name="part_route" placeholder="Enter part route">
+                        <input type="text" class="form-control bg-light" id="part_route" name="part_route" readonly placeholder="Auto-populated">
                     </div>
 
                     <!-- Part No -->
                     <div class="col-md-6 mb-3">
                         <label for="part_no" class="form-label">Part No <span class="text-danger">*</span></label>
                         <input type="text" class="form-control bg-light" id="part_no" name="part_no" required readonly placeholder="Auto-populated">
-                        <small class="form-text text-muted">Auto-populated from request</small>
                     </div>
 
                     <!-- Part Name -->
                     <div class="col-md-6 mb-3">
                         <label for="part_name" class="form-label">Part Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control bg-light" id="part_name" name="part_name" required readonly placeholder="Auto-populated">
-                        <small class="form-text text-muted">Auto-populated from request</small>
                     </div>
 
                     <!-- Manufacturer -->
                     <div class="col-md-6 mb-3">
                         <label for="manufacturer" class="form-label">Manufacturer <span class="text-danger">*</span></label>
                         <input type="text" class="form-control bg-light" id="manufacturer" name="manufacturer" required readonly placeholder="Auto-populated">
-                        <small class="form-text text-muted">Auto-populated (Supplier name)</small>
                     </div>
 
                     <!-- Material -->
@@ -82,8 +142,16 @@
 
                     <!-- Weight -->
                     <div class="col-md-6 mb-3">
-                        <label for="weight" class="form-label">Weight</label>
-                        <input type="text" class="form-control" id="weight" name="weight" placeholder="Enter weight with unit">
+                        <label for="weight" class="form-label">Weight (kg)</label>
+                        <div class="input-group">
+                            <button type="button" class="btn btn-outline-secondary" onclick="decrementWeight()">
+                                <i class="ti ti-minus"></i>
+                            </button>
+                            <input type="number" class="form-control text-center" id="weight" name="weight" placeholder="0.00" min="0" step="0.01" inputmode="decimal">
+                            <button type="button" class="btn btn-outline-secondary" onclick="incrementWeight()">
+                                <i class="ti ti-plus"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Revision Date -->
@@ -128,20 +196,20 @@
                     <i class="ti ti-plus"></i> Add Item
                 </button>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered" id="inspectionItemsTable">
+            <div class="card-body p-0">
+                <div class="table-responsive" style="overflow-x: auto;">
+                    <table class="table table-bordered mb-0" id="inspectionItemsTable" style="min-width: 100%;">
                         <thead class="table-light">
                             <tr>
-                                <th style="width: 5%;">No.</th>
-                                <th style="width: 20%;">Inspection Item <span class="text-danger">*</span></th>
-                                <th style="width: 15%;">Inspection Instrument</th>
-                                <th style="width: 20%;">Inspection Criterion <span class="text-danger">*</span></th>
-                                <th style="width: 8%;">Rank <span class="text-danger">*</span></th>
-                                <th style="width: 10%;">Supplier Sampling</th>
-                                <th style="width: 10%;">AAIJ Sampling</th>
-                                <th style="width: 10%;">Remark / Method</th>
-                                <th style="width: 2%;"></th>
+                                <th style="width: 40px; min-width: 40px;">No.</th>
+                                <th style="width: 150px; min-width: 150px;">Inspection Item <span class="text-danger">*</span></th>
+                                <th style="width: 120px; min-width: 120px;">Instrument</th>
+                                <th style="width: 150px; min-width: 150px;">Criterion <span class="text-danger">*</span></th>
+                                <th style="width: 60px; min-width: 60px;">Rank <span class="text-danger">*</span></th>
+                                <th style="width: 100px; min-width: 100px;">Supplier Sampling</th>
+                                <th style="width: 100px; min-width: 100px;">AAIJ Sampling</th>
+                                <th style="width: 120px; min-width: 120px;">Remark / Method</th>
+                                <th style="width: 50px; min-width: 50px;"></th>
                             </tr>
                         </thead>
                         <tbody id="inspectionItemsBody">
@@ -149,7 +217,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div id="noItemsMessage" class="alert alert-info mt-3">
+                <div id="noItemsMessage" class="alert alert-info m-3">
                     <i class="ti ti-info-circle me-2"></i>
                     Click "Add Item" button above to add inspection items
                 </div>
@@ -220,22 +288,6 @@ function addDrawing() {
                 </button>
             </div>
             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Drawing Name</label>
-                    <input type="text" class="form-control" onchange="updateDrawing(${window.drawings.length - 1}, 'drawing_name', this.value)" placeholder="Drawing name">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Drawing No</label>
-                    <input type="text" class="form-control" onchange="updateDrawing(${window.drawings.length - 1}, 'drawing_no', this.value)" placeholder="Drawing number">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="form-label">Revision</label>
-                    <input type="text" class="form-control" onchange="updateDrawing(${window.drawings.length - 1}, 'revision', this.value)" placeholder="Rev.">
-                </div>
-                <div class="col-md-12 mb-3">
-                    <label class="form-label">Description</label>
-                    <textarea class="form-control" rows="2" onchange="updateDrawing(${window.drawings.length - 1}, 'description', this.value)" placeholder="Description"></textarea>
-                </div>
                 <div class="col-md-12 mb-3">
                     <label class="form-label">Drawing File (PDF/Image)</label>
                     <input type="file" class="form-control" accept=".pdf,image/*" onchange="handleDrawingFileUpload(${window.drawings.length - 1}, this.files[0])">
@@ -258,6 +310,8 @@ function updateDrawing(index, field, value) {
 function handleDrawingFileUpload(index, file) {
     if (!file) return;
     
+    console.log(`🖼️ Uploading file for drawing ${index}:`, file.name, file.size);
+    
     if (file.size > 10 * 1024 * 1024) {
         Swal.fire('Error', 'File exceeds 10MB limit', 'error');
         return;
@@ -265,14 +319,25 @@ function handleDrawingFileUpload(index, file) {
     
     const reader = new FileReader();
     reader.onload = function(e) {
+        console.log(`✅ File loaded, saving to drawing ${index}`);
         window.drawings[index].file_path = e.target.result;
         window.drawings[index].file_name = file.name;
+        
+        console.log(`📊 Drawing ${index} updated:`, {
+            file_path: !!window.drawings[index].file_path,
+            file_name: window.drawings[index].file_name,
+            file_size: file.size
+        });
         
         document.getElementById(`drawing-file-${index}`).innerHTML = `
             <div class="alert alert-success">
                 <i class="ti ti-check"></i> ${file.name} (${formatFileSize(file.size)})
             </div>
         `;
+    };
+    reader.onerror = function(error) {
+        console.error(`❌ Error reading file for drawing ${index}:`, error);
+        Swal.fire('Error', 'Failed to read file', 'error');
     };
     reader.readAsDataURL(file);
 }
@@ -318,22 +383,6 @@ function renderDrawings() {
                     </button>
                 </div>
                 <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Drawing Name</label>
-                        <input type="text" class="form-control" value="${drawing.drawing_name || ''}" onchange="updateDrawing(${index}, 'drawing_name', this.value)">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Drawing No</label>
-                        <input type="text" class="form-control" value="${drawing.drawing_no || ''}" onchange="updateDrawing(${index}, 'drawing_no', this.value)">
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Revision</label>
-                        <input type="text" class="form-control" value="${drawing.revision || ''}" onchange="updateDrawing(${index}, 'revision', this.value)">
-                    </div>
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" rows="2" onchange="updateDrawing(${index}, 'description', this.value)">${drawing.description || ''}</textarea>
-                    </div>
                     <div class="col-md-12 mb-3">
                         <label class="form-label">Drawing File</label>
                         ${drawing.file_path ? `<div class="alert alert-success"><i class="ti ti-check"></i> File uploaded</div>` : '<input type="file" class="form-control" accept=".pdf,image/*" onchange="handleDrawingFileUpload(' + index + ', this.files[0])">'}
@@ -348,6 +397,9 @@ function renderDrawings() {
 
 // ===== INSPECTION ITEMS MANAGEMENT =====
 function addInspectionItem() {
+    console.log('➕ Adding new inspection item');
+    console.log('📊 Current items count:', window.inspectionItems.length);
+    
     const item = {
         id: null,
         inspection_item: '',
@@ -360,6 +412,10 @@ function addInspectionItem() {
     };
     
     window.inspectionItems.push(item);
+    console.log('📊 After push, total items:', window.inspectionItems.length);
+    console.log('📦 Items array:', window.inspectionItems);
+    
+    // Force re-render
     renderInspectionItems();
 }
 
@@ -387,35 +443,62 @@ function removeInspectionItem(index) {
 }
 
 function renderInspectionItems() {
+    console.log('🔄 Rendering inspection items, count:', window.inspectionItems.length);
     const tbody = document.getElementById('inspectionItemsBody');
-    tbody.innerHTML = '';
+    const noItemsMessage = document.getElementById('noItemsMessage');
+    const inspectionItemsTable = document.getElementById('inspectionItemsTable');
     
-    if (window.inspectionItems.length === 0) {
-        document.getElementById('noItemsMessage').style.display = 'block';
+    if (!tbody) {
+        console.error('❌ tbody element not found!');
         return;
     }
     
-    document.getElementById('noItemsMessage').style.display = 'none';
+    tbody.innerHTML = '';
+    
+    if (window.inspectionItems.length === 0) {
+        if (noItemsMessage) noItemsMessage.style.display = 'block';
+        if (inspectionItemsTable) inspectionItemsTable.style.display = 'none';
+        return;
+    }
+    
+    if (noItemsMessage) noItemsMessage.style.display = 'none';
+    if (inspectionItemsTable) inspectionItemsTable.style.display = 'table';
     
     window.inspectionItems.forEach((item, index) => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="text-center">${index + 1}</td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.inspection_item || ''}" onchange="updateInspectionItem(${index}, 'inspection_item', this.value)" required></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.inspection_instrument || ''}" onchange="updateInspectionItem(${index}, 'inspection_instrument', this.value)"></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.inspection_criterion || ''}" onchange="updateInspectionItem(${index}, 'inspection_criterion', this.value)" required></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.rank || ''}" onchange="updateInspectionItem(${index}, 'rank', this.value)" required></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.supplier_sampling || ''}" onchange="updateInspectionItem(${index}, 'supplier_sampling', this.value)"></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.aaij_sampling || ''}" onchange="updateInspectionItem(${index}, 'aaij_sampling', this.value)"></td>
-            <td><input type="text" class="form-control form-control-sm" value="${item.remark_inspection_method || ''}" onchange="updateInspectionItem(${index}, 'remark_inspection_method', this.value)"></td>
-            <td class="text-center">
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeInspectionItem(${index})">
+            <td class="text-center align-middle" style="padding: 0.5rem;">${index + 1}</td>
+            <td style="padding: 0.25rem;"><input type="text" class="form-control form-control-sm" style="min-width: 140px;" value="${item.inspection_item || ''}" onchange="updateInspectionItem(${index}, 'inspection_item', this.value)" required></td>
+            <td style="padding: 0.25rem;"><input type="text" class="form-control form-control-sm" style="min-width: 110px;" value="${item.inspection_instrument || ''}" onchange="updateInspectionItem(${index}, 'inspection_instrument', this.value)"></td>
+            <td style="padding: 0.25rem;"><input type="text" class="form-control form-control-sm" style="min-width: 140px;" value="${item.inspection_criterion || ''}" onchange="updateInspectionItem(${index}, 'inspection_criterion', this.value)" required></td>
+            <td style="padding: 0.25rem;"><input type="text" class="form-control form-control-sm text-center" style="min-width: 50px;" value="${item.rank || ''}" onchange="updateInspectionItem(${index}, 'rank', this.value)" required></td>
+            <td style="padding: 0.25rem;"><input type="text" class="form-control form-control-sm" style="min-width: 90px;" value="${item.supplier_sampling || ''}" onchange="updateInspectionItem(${index}, 'supplier_sampling', this.value)"></td>
+            <td style="padding: 0.25rem;"><input type="text" class="form-control form-control-sm" style="min-width: 90px;" value="${item.aaij_sampling || ''}" onchange="updateInspectionItem(${index}, 'aaij_sampling', this.value)"></td>
+            <td style="padding: 0.25rem;"><input type="text" class="form-control form-control-sm" style="min-width: 110px;" value="${item.remark_inspection_method || ''}" onchange="updateInspectionItem(${index}, 'remark_inspection_method', this.value)"></td>
+            <td class="text-center align-middle" style="padding: 0.25rem;">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeInspectionItem(${index})" style="padding: 0.25rem 0.5rem;">
                     <i class="ti ti-trash"></i>
                 </button>
             </td>
         `;
         tbody.appendChild(row);
     });
+    console.log('✅ Rendered', window.inspectionItems.length, 'items');
+}
+
+// ===== WEIGHT INPUT MANAGEMENT =====
+function incrementWeight() {
+    const weightInput = document.getElementById('weight');
+    const currentValue = parseFloat(weightInput.value) || 0;
+    const newValue = Math.round((currentValue + 0.1) * 100) / 100;
+    weightInput.value = newValue.toFixed(2);
+}
+
+function decrementWeight() {
+    const weightInput = document.getElementById('weight');
+    const currentValue = parseFloat(weightInput.value) || 0;
+    const newValue = Math.max(0, Math.round((currentValue - 0.1) * 100) / 100);
+    weightInput.value = newValue.toFixed(2);
 }
 
 // ===== FORM INITIALIZATION =====
@@ -457,6 +540,11 @@ function initializeForm() {
 }
 
 function populateFormData(data) {
+    // Check and display revision banner if document is in revision status
+    if (data.request_document && data.request_document.status === 'REVISE' && data.request_document.revised_by_team) {
+        displayRevisionBanner(data.request_document);
+    }
+    
     // General Information
     if (data.model) document.getElementById('model').value = data.model;
     if (data.date_issued) document.getElementById('date_issued').value = data.date_issued;
@@ -471,35 +559,92 @@ function populateFormData(data) {
     if (data.revision_date) document.getElementById('revision_date').value = data.revision_date;
     if (data.revision_record) document.getElementById('revision_record').value = data.revision_record;
     
-    // Drawings
-    if (data.drawings && data.drawings.length > 0) {
+    // Drawings - only populate from server if window.drawings is empty
+    // This prevents overwriting user's new drawings with server data
+    if (data.drawings && data.drawings.length > 0 && window.drawings.length === 0) {
         window.drawings = data.drawings;
-        renderDrawings();
+        console.log('📥 Loaded', window.drawings.length, 'drawings from server');
     }
     
-    // Inspection Items
-    if (data.inspection_items && data.inspection_items.length > 0) {
+    // Inspection Items - only populate from server if window.inspectionItems is empty
+    if (data.inspection_items && data.inspection_items.length > 0 && window.inspectionItems.length === 0) {
         window.inspectionItems = data.inspection_items;
-        renderInspectionItems();
+        console.log('📥 Loaded', window.inspectionItems.length, 'inspection items from server');
     }
+    
+    // Always render inspection items to update UI
+    renderInspectionItems();
+}
+
+// Display revision banner with revision information
+function displayRevisionBanner(requestDocument) {
+    const banner = document.getElementById('revisionBanner');
+    if (!banner) return;
+    
+    // Get team label
+    const teamLabels = {
+        'qa': 'Quality Assurance (QA)',
+        'purchasing': 'Purchasing',
+        'ppc': 'Production Planning & Control (PPC)'
+    };
+    const teamLabel = teamLabels[requestDocument.revised_by_team] || requestDocument.revised_by_team;
+    
+    // Populate banner content
+    document.getElementById('revisionTeam').textContent = teamLabel;
+    document.getElementById('revisionNote').textContent = requestDocument.revision_note || 'Tidak ada catatan';
+    
+    // Format revision date
+    if (requestDocument.revised_at) {
+        const revDate = new Date(requestDocument.revised_at);
+        document.getElementById('revisionDate').textContent = revDate.toLocaleString('id-ID', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+    
+    // Show the banner
+    banner.style.display = 'block';
+    
+    console.log('📋 Revision banner displayed for team:', requestDocument.revised_by_team);
 }
 
 function collectFormData() {
     return {
-        model: document.getElementById('model').value,
-        date_issued: document.getElementById('date_issued').value,
-        ref_no: document.getElementById('ref_no').value,
-        part_route: document.getElementById('part_route').value,
-        part_no: document.getElementById('part_no').value,
-        part_name: document.getElementById('part_name').value,
-        manufacturer: document.getElementById('manufacturer').value,
-        material: document.getElementById('material').value,
-        general_tolerance: document.getElementById('general_tolerance').value,
-        weight: document.getElementById('weight').value,
-        revision_date: document.getElementById('revision_date').value,
-        revision_record: document.getElementById('revision_record').value,
-        drawings: window.drawings,
-        inspection_items: window.inspectionItems
+        generalInformation: {
+            model: document.getElementById('model').value,
+            dateIssued: document.getElementById('date_issued').value,
+            refNo: document.getElementById('ref_no').value,
+            partRoute: document.getElementById('part_route').value,
+            partNo: document.getElementById('part_no').value,
+            partName: document.getElementById('part_name').value,
+            manufacturer: document.getElementById('manufacturer').value,
+            material: document.getElementById('material').value,
+            generalTolerance: document.getElementById('general_tolerance').value,
+            weight: document.getElementById('weight').value,
+            revisionDate: document.getElementById('revision_date').value,
+            revisionRecord: document.getElementById('revision_record').value,
+        },
+        drawings: window.drawings.map(d => ({
+            id: d.id,
+            drawingName: d.drawing_name,
+            drawingNo: d.drawing_no,
+            revision: d.revision,
+            description: d.description,
+            filePath: d.file_path
+        })),
+        inspectionItems: window.inspectionItems.map(item => ({
+            id: item.id,
+            inspectionItem: item.inspection_item,
+            inspectionInstrument: item.inspection_instrument,
+            inspectionCriterion: item.inspection_criterion,
+            rank: item.rank,
+            supplierSampling: item.supplier_sampling,
+            aaijSampling: item.aaij_sampling,
+            remarkInspectionMethod: item.remark_inspection_method
+        }))
     };
 }
 
@@ -517,6 +662,28 @@ function setupAutoSave() {
             }, 2000);
         });
     });
+    
+    // Add validation for weight input
+    const weightInput = document.getElementById('weight');
+    if (weightInput) {
+        weightInput.addEventListener('blur', function() {
+            let value = parseFloat(this.value);
+            // If value is negative, set to 0
+            if (value < 0) {
+                this.value = '0.00';
+            } else if (value >= 0) {
+                // Format to 2 decimal places
+                this.value = value.toFixed(2);
+            }
+        });
+        
+        // Prevent negative input while typing
+        weightInput.addEventListener('input', function() {
+            if (this.value < 0) {
+                this.value = 0;
+            }
+        });
+    }
 }
 
 // ===== FORM SUBMISSION =====
@@ -527,7 +694,6 @@ function saveDraft(silent = false) {
     }
 
     const formData = collectFormData();
-    formData.status = 'DRAFT';
     
     fetch(`/api/is/${window.inspectionStandardId}/draft`, {
         method: 'POST',
@@ -572,9 +738,27 @@ function validate() {
         }
     }
     
+    console.log('📋 Validating drawings:', {
+        count: window.drawings.length,
+        drawings: window.drawings.map((d, i) => ({
+            index: i,
+            has_file: !!d.file_path,
+            file_name: d.file_name
+        }))
+    });
+    
     if (window.drawings.length === 0) {
         Swal.fire('Validation Error', 'At least one drawing is required', 'warning');
         return false;
+    }
+    
+    // Check if drawings have file_path (file uploaded)
+    for (let i = 0; i < window.drawings.length; i++) {
+        if (!window.drawings[i].file_path) {
+            console.warn(`❌ Drawing ${i} has no file_path`);
+            Swal.fire('Validation Error', `Drawing #${i + 1}: File is required. Please upload a file.`, 'warning');
+            return false;
+        }
     }
     
     if (window.inspectionItems.length === 0) {
@@ -599,6 +783,7 @@ function validate() {
         }
     }
     
+    console.log('✅ Validation passed');
     return true;
 }
 
@@ -611,19 +796,62 @@ function submitForm() {
     }
 
     const formData = collectFormData();
-    formData.status = 'SUBMITTED';
+    
+    console.log('📤 Submitting form data:', {
+        inspectionStandardId: window.inspectionStandardId,
+        drawingsCount: formData.drawings.length,
+        itemsCount: formData.inspectionItems.length,
+        generalInfo: formData.generalInformation
+    });
+    
+    // Show loading indicator
+    Swal.fire({
+        title: 'Submitting...',
+        text: 'Please wait while we process your submission',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
     
     fetch(`/api/is/${window.inspectionStandardId}/submit`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
         },
         body: JSON.stringify(formData)
-    }).then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
+    }).then(async r => {
+        console.log('📥 Response received:', {
+            status: r.status,
+            statusText: r.statusText,
+            contentType: r.headers.get('content-type')
+        });
+        
+        // Check content type before trying to parse
+        const contentType = r.headers.get('content-type');
+        
+        if (!contentType || !contentType.includes('application/json')) {
+            // Try to get the response text to see what the server returned
+            const responseText = await r.text();
+            console.error('❌ Server returned HTML/non-JSON response:', responseText.substring(0, 500));
+            console.error('❌ Response status:', r.status, r.statusText);
+            
+            throw new Error(`Server error (${r.status}): The server encountered an error. Please check the server logs for details.`);
+        }
+        
+        const data = await r.json();
+        
+        if (!r.ok) {
+            throw new Error(data.message || `HTTP ${r.status}: ${r.statusText}`);
+        }
+        
+        return data;
     }).then(result => {
+        Swal.close();
+        
         if (result.success) {
             Swal.fire({
                 icon: 'success',
@@ -637,8 +865,14 @@ function submitForm() {
             Swal.fire('Error', result.message || 'Failed to submit form', 'error');
         }
     }).catch(error => {
-        console.error('Error submitting form:', error);
-        Swal.fire('Error', 'Failed to submit form: ' + error.message, 'error');
+        console.error('❌ Error submitting form:', error);
+        Swal.close();
+        Swal.fire({
+            icon: 'error',
+            title: 'Submission Failed',
+            text: error.message || 'An unexpected error occurred. Please try again.',
+            footer: 'If the problem persists, please contact support.'
+        });
     });
 }
 

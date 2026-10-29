@@ -1,13 +1,55 @@
 @php
-    // Get all documents sorted by document_type_id for consistent order
-    $allDocuments = isset($part) ? $part->requestDocuments->sortBy('document_type_id') : collect();
+    // Get all documents sorted by document_type order for consistent order
+    $allDocuments = isset($part) ? $part->requestDocuments->sortBy(function($doc) {
+        return $doc->documentType->order ?? 999;
+    })->values() : collect(); // Add ->values() to reset array keys after sorting
     
-    // Count mandatory documents
+    // Count mandatory documents with proper status checking
     $mandatoryDocs = $allDocuments->where('documentType.is_mandatory', true);
     $optionalDocs = $allDocuments->where('documentType.is_mandatory', false);
     
     $mandatoryTotal = $mandatoryDocs->count();
-    $mandatoryUploaded = $mandatoryDocs->whereIn('status', ['SUBMITTED', 'APPROVED'])->count();
+    
+    // Count uploaded/submitted mandatory documents with proper status check for form-based docs
+    // REVISE status is NOT counted as submitted
+    $mandatoryUploaded = 0;
+    foreach ($mandatoryDocs as $doc) {
+        $docCode = $doc->documentType->code ?? '';
+        $isSubmitted = false;
+        
+        // Skip if document is in REVISE status
+        if ($doc->status === 'REVISE') {
+            continue;
+        }
+        
+        // Check based on document type
+        if ($docCode === 'IS') {
+            // Inspection Standard - check inspection_standards table
+            $is = $doc->inspectionStandard ?? \App\Models\InspectionStandard::where('request_document_id', $doc->id)->first();
+            $isSubmitted = $is && in_array(strtoupper($is->status), ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']);
+        } elseif ($docCode === 'MSA') {
+            // MSA Gage R&R - check msa_gage_rr table
+            $msa = $doc->msaGageRr ?? \App\Models\MsaGageRr::where('request_document_id', $doc->id)->first();
+            // MSA status is stored in uppercase but check both cases for safety
+            $isSubmitted = $msa && (in_array(strtoupper($msa->status), ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']) || $msa->status === 'SUBMITTED');
+        } elseif (in_array($docCode, ['PSW', 'PACKAGING_STANDARD'])) {
+            // PSW/PS - check respective tables
+            if ($docCode === 'PSW') {
+                $form = $doc->partSubmissionWarrant ?? \App\Models\PartSubmissionWarrant::where('request_document_id', $doc->id)->first();
+            } else {
+                $form = $doc->packagingStandard ?? \App\Models\PackagingStandard::where('request_document_id', $doc->id)->first();
+            }
+            $isSubmitted = $form && in_array(strtoupper($form->status), ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']);
+        } else {
+            // Regular upload documents - check request_documents table
+            $isSubmitted = in_array(strtoupper($doc->status), ['SUBMITTED', 'APPROVED']);
+        }
+        
+        if ($isSubmitted) {
+            $mandatoryUploaded++;
+        }
+    }
+    
     $mandatoryPending = $mandatoryTotal - $mandatoryUploaded;
     
     $totalDocs = $allDocuments->count();
@@ -96,9 +138,9 @@
                 <thead class="table-light">
                     <tr>
                         <th width="5%" class="text-center">NO</th>
-                        <th width="40%">DOCUMENT</th>
-                        <th width="15%" class="text-center">DATE SUBMIT</th>
-                        <th width="40%">ATTACHMENT</th>
+                        <th width="30%">DOCUMENT</th>
+                        <th width="45%">ATTACHMENT</th>
+                        <th width="20%" class="text-center">DATE SUBMIT</th>
                     </tr>
                 </thead>
                 <tbody id="documentsTableBody">
@@ -109,83 +151,226 @@
                         <td class="text-center align-middle">
                             <strong>{{ $index + 1 }}</strong>
                         </td>
-                        <td class="align-middle" colspan="3">
+                        <td class="align-middle">
                             {{-- Include IS component inline --}}
-                            <div class="d-flex flex-column gap-2">
-                                <div class="d-flex align-items-start">
-                                    <div class="flex-grow-1">
-                                        <div class="fw-semibold mb-1">{{ $doc->documentType->name }}</div>
-                                        @if($doc->documentType->is_mandatory)
-                                            <span class="badge bg-danger badge-sm">Mandatory</span>
-                                        @else
-                                            <span class="badge bg-secondary badge-sm">Optional</span>
-                                        @endif
-                                        
-                                        @php
-                                            $inspectionStandard = $doc->inspectionStandard ?? \App\Models\InspectionStandard::where('request_document_id', $doc->id)->first();
-                                            $currentStatus = $inspectionStandard?->status ?? $doc->status;
-                                        @endphp
-                                        
-                                        @if($currentStatus === 'DRAFT')
-                                            <span class="badge bg-secondary badge-sm ms-1">Draft</span>
-                                        @elseif($doc->status === 'PENDING')
-                                            <span class="badge bg-warning text-dark badge-sm ms-1">Pending</span>
-                                        @elseif($doc->status === 'SUBMITTED')
-                                            <span class="badge bg-info badge-sm ms-1">Submitted</span>
-                                        @elseif($doc->status === 'REVISE')
-                                            <span class="badge bg-danger badge-sm ms-1">Revision Required</span>
-                                        @elseif($doc->status === 'APPROVED')
-                                            <span class="badge bg-success badge-sm ms-1">Approved</span>
-                                        @endif
-                                        
-                                        @if($doc->documentType->description)
-                                        <div class="text-muted small mt-1">{{ $doc->documentType->description }}</div>
-                                        @endif
-                                        
-                                        @if($doc->status === 'REVISE' && $doc->revision_note)
-                                        <div class="alert alert-danger small mt-2 mb-0 p-2">
-                                            <strong><i class="ti ti-alert-circle"></i> Revision Required:</strong><br>
-                                            {{ $doc->revision_note }}
-                                            @if($doc->revision_deadline_at)
-                                            <div class="mt-1">
-                                                <small><i class="ti ti-clock"></i> Deadline: {{ $doc->revision_deadline_at->format('d M Y H:i') }}</small>
-                                            </div>
-                                            @endif
-                                        </div>
-                                        @endif
-                                    </div>
-                                    
-                                    <div class="ms-3">
-                                        @if($currentStatus === 'DRAFT' || $doc->status === 'PENDING' || $doc->status === 'REVISE')
-                                            {{-- Show form button --}}
-                                            @php
-                                                $token = $part->documentRequest->access_token ?? '';
-                                            @endphp
-                                            <a href="{{ route('inspection-standard.form', $token) }}" class="btn btn-primary btn-sm">
-                                                <i class="ti ti-pencil me-1"></i>{{ $currentStatus === 'DRAFT' ? 'Continue Form' : 'Isi Form Terlebih Dahulu' }}
-                                            </a>
-                                        @elseif(in_array($doc->status, ['SUBMITTED', 'APPROVED']))
-                                            {{-- Show PDF buttons --}}
-                                            @if($inspectionStandard && $inspectionStandard->pdf_file_path)
-                                            <div class="d-flex flex-column gap-2">
-                                                <small class="text-muted">
-                                                    <i class="ti ti-calendar me-1"></i>{{ $doc->submitted_at?->format('d M Y H:i') }}
-                                                </small>
-                                                <a href="{{ route('inspection-standard.pdf', $inspectionStandard->id) }}" 
-                                                   class="btn btn-outline-primary btn-sm" 
-                                                   target="_blank">
-                                                    <i class="ti ti-eye"></i> View PDF
-                                                </a>
-                                                <a href="{{ route('inspection-standard.download', $inspectionStandard->id) }}" 
-                                                   class="btn btn-success btn-sm">
-                                                    <i class="ti ti-download"></i> Download
-                                                </a>
-                                            </div>
-                                            @endif
-                                        @endif
-                                    </div>
+                            <div class="fw-semibold mb-1">{{ $doc->documentType->name }}</div>
+                            @if($doc->documentType->is_mandatory)
+                                <span class="badge bg-danger badge-sm">Mandatory</span>
+                            @else
+                                <span class="badge bg-secondary badge-sm">Optional</span>
+                            @endif
+                            
+                            @php
+                                // SINGLE SOURCE OF TRUTH: Ambil status dari tabel inspection_standards
+                                $inspectionStandard = $doc->inspectionStandard;
+                                if (!$inspectionStandard) {
+                                    $inspectionStandard = \App\Models\InspectionStandard::where('request_document_id', $doc->id)->first();
+                                }
+                                // Status diambil dari inspection_standards.status, bukan request_documents.status
+                                $currentStatus = $inspectionStandard?->status ?? 'PENDING';
+                            @endphp
+                            
+                            {{-- Badge status berdasarkan inspection_standards.status --}}
+                            @if($currentStatus === 'DRAFT')
+                                <span class="badge bg-secondary badge-sm ms-1">Draft</span>
+                            @elseif($currentStatus === 'PENDING')
+                                <span class="badge bg-warning text-dark badge-sm ms-1">Pending</span>
+                            @elseif($currentStatus === 'SUBMITTED' || $currentStatus === 'PENDING_REVIEW')
+                                <span class="badge bg-success badge-sm ms-1">Submitted</span>
+                            @elseif($currentStatus === 'REVISE')
+                                <span class="badge badge-sm ms-1" style="background-color: #FFFFFF; color: #000000; border: 1px solid #CED4DA;">Revisi</span>
+                            @elseif($currentStatus === 'APPROVED')
+                                <span class="badge bg-success badge-sm ms-1">Approved</span>
+                            @elseif($currentStatus === 'REJECTED')
+                                <span class="badge bg-danger badge-sm ms-1">Rejected</span>
+                            @endif
+                            
+                            @if($doc->documentType->description)
+                            <div class="text-muted small mt-1">{{ $doc->documentType->description }}</div>
+                            @endif
+                            
+                            {{-- Tampilkan informasi revisi jika status REVISE --}}
+                            @if($doc->status === 'REVISE' && $doc->canBeRevised())
+                            <div class="alert alert-warning small mt-2 mb-0 p-2">
+                                <strong><i class="ti ti-alert-circle"></i> Revisi Diperlukan</strong><br>
+                                <small><strong>Direvisi oleh:</strong> {{ $doc->getTeamLabel() }}</small><br>
+                                <small><strong>Catatan:</strong> {{ $doc->revision_note }}</small>
+                                @if($doc->revised_at)
+                                <div class="mt-1">
+                                    <small><i class="ti ti-clock"></i> {{ $doc->revised_at->format('d M Y H:i') }}</small>
                                 </div>
+                                @endif
                             </div>
+                            @endif
+                        </td>
+                        
+                        <!-- ATTACHMENT -->
+                        <td class="align-middle">
+                            @if($doc->status === 'REVISE' && $doc->canBeRevised())
+                                {{-- Tombol Revisi untuk dokumen yang perlu direvisi --}}
+                                @php
+                                    $token = $part->documentRequest->access_token ?? '';
+                                @endphp
+                                <a href="{{ route('inspection-standard.form', $token) }}" class="btn btn-warning btn-sm w-100" style="border: 2px solid #FFA500;">
+                                    <i class="ti ti-pencil me-1"></i>Revisi Dokumen
+                                </a>
+                            @elseif(in_array($currentStatus, ['DRAFT', 'PENDING']))
+                                {{-- Show form button untuk DRAFT atau PENDING --}}
+                                @php
+                                    $token = $part->documentRequest->access_token ?? '';
+                                    $buttonText = $currentStatus === 'DRAFT' ? 'Lanjutkan Form' : 'Isi Form Terlebih Dahulu';
+                                @endphp
+                                <a href="{{ route('inspection-standard.form', $token) }}" class="btn btn-primary btn-sm w-100">
+                                    <i class="ti ti-pencil me-1"></i>{{ $buttonText }}
+                                </a>
+                            @elseif(in_array($currentStatus, ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']))
+                                {{-- Show PDF buttons --}}
+                                @if($inspectionStandard && $inspectionStandard->pdf_file_path)
+                                <div class="d-flex gap-2 w-100">
+                                    <a href="{{ route('inspection-standard.pdf', $inspectionStandard->id) }}?v={{ $doc->updated_at?->timestamp ?? time() }}" 
+                                       class="btn btn-outline-primary btn-sm flex-fill" 
+                                       target="_blank"
+                                       style="min-width: 0;">
+                                        <i class="ti ti-eye me-1"></i>View PDF
+                                    </a>
+                                    <a href="{{ route('inspection-standard.download', $inspectionStandard->id) }}?v={{ $doc->updated_at?->timestamp ?? time() }}" 
+                                       class="btn btn-success btn-sm flex-fill"
+                                       style="min-width: 0;">
+                                        <i class="ti ti-download me-1"></i>Download
+                                    </a>
+                                </div>
+                                @endif
+                            @endif
+                        </td>
+                        
+                        <!-- DATE SUBMIT -->
+                        <td class="text-center align-middle">
+                            @if($inspectionStandard && $inspectionStandard->submitted_at)
+                                <div class="fw-semibold">{{ $inspectionStandard->submitted_at->format('d M Y') }}</div>
+                                <small class="text-muted">{{ $inspectionStandard->submitted_at->format('H:i') }}</small>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
+                        </td>
+                    </tr>
+                    {{-- Special handling for MSA Gage R&R documents --}}
+                    @elseif($doc->documentType->code === 'MSA')
+                    <tr>
+                        <td class="text-center align-middle">
+                            <strong>{{ $index + 1 }}</strong>
+                        </td>
+                        <td class="align-middle">
+                            {{-- MSA Gage R&R Form component --}}
+                            <div class="fw-semibold mb-1">{{ $doc->documentType->name }}</div>
+                            @if($doc->documentType->is_mandatory)
+                                <span class="badge bg-danger badge-sm">Mandatory</span>
+                            @else
+                                <span class="badge bg-secondary badge-sm">Optional</span>
+                            @endif
+                            
+                            @php
+                                // SINGLE SOURCE OF TRUTH: Ambil status dari tabel msa_gage_rr
+                                $msaForm = $doc->msaGageRr;
+                                if (!$msaForm) {
+                                    $msaForm = \App\Models\MsaGageRr::where('request_document_id', $doc->id)->first();
+                                }
+                                // Status diambil dari msa_gage_rr.status, bukan request_documents.status
+                                // Status sama seperti IS: DRAFT, PENDING, SUBMITTED
+                                // Jika form ada tapi status NULL, itu berarti DRAFT
+                                // NORMALIZE ke uppercase untuk konsistensi
+                                $rawStatus = $msaForm ? ($msaForm->status ?? 'DRAFT') : 'PENDING';
+                                $msaStatus = strtoupper($rawStatus);
+                            @endphp
+                            
+                            {{-- Badge status berdasarkan msa_gage_rr.status (sama format dengan IS) --}}
+                            @if($msaStatus === 'DRAFT')
+                                <span class="badge bg-secondary badge-sm ms-1">Draft</span>
+                            @elseif($msaStatus === 'PENDING')
+                                <span class="badge bg-warning text-dark badge-sm ms-1">Pending</span>
+                            @elseif($msaStatus === 'SUBMITTED')
+                                <span class="badge bg-success badge-sm ms-1">Submitted</span>
+                            @elseif($msaStatus === 'REVISE' || $doc->status === 'REVISE')
+                                <span class="badge badge-sm ms-1" style="background-color: #FFFFFF; color: #000000; border: 1px solid #CED4DA;">Revisi</span>
+                            @endif
+                            
+                            @if($doc->documentType->description)
+                            <div class="text-muted small mt-1">{{ $doc->documentType->description }}</div>
+                            @endif
+                            
+                            {{-- Tampilkan informasi revisi jika status REVISE --}}
+                            @if($doc->status === 'REVISE' && $doc->canBeRevised())
+                            <div class="alert alert-warning small mt-2 mb-0 p-2">
+                                <strong><i class="ti ti-alert-circle"></i> Revisi Diperlukan</strong><br>
+                                <small><strong>Direvisi oleh:</strong> {{ $doc->getTeamLabel() }}</small><br>
+                                <small><strong>Catatan:</strong> {{ $doc->revision_note }}</small>
+                                @if($doc->revised_at)
+                                <div class="mt-1">
+                                    <small><i class="ti ti-clock"></i> {{ $doc->revised_at->format('d M Y H:i') }}</small>
+                                </div>
+                                @endif
+                            </div>
+                            @endif
+                        </td>
+                        
+                        <!-- ATTACHMENT -->
+                        <td class="align-middle">
+                            @if($doc->status === 'REVISE' && $doc->canBeRevised())
+                                {{-- Tombol Revisi untuk dokumen yang perlu direvisi --}}
+                                @if($msaForm && $msaForm->token)
+                                <a href="{{ route('supplier.msa', ['token' => $msaForm->token]) }}" class="btn btn-warning btn-sm w-100" style="border: 2px solid #FFA500;" target="_blank">
+                                    <i class="ti ti-pencil me-1"></i>Revisi Dokumen
+                                </a>
+                                @endif
+                            @elseif($msaStatus === 'PENDING')
+                                {{-- Show form button untuk pending (belum dibuat) - redirect to form --}}
+                                @if($msaForm && $msaForm->token)
+                                <a href="{{ route('supplier.msa', ['token' => $msaForm->token]) }}" class="btn btn-primary btn-sm w-100" target="_blank">
+                                    <i class="ti ti-pencil me-1"></i>Isi Form Terlebih Dahulu
+                                </a>
+                                @else
+                                <div class="alert alert-warning mb-0 p-2">
+                                    <small>MSA form not initialized. Please contact admin.</small>
+                                </div>
+                                @endif
+                            @elseif($msaStatus === 'DRAFT')
+                                {{-- Show form button untuk draft --}}
+                                @if($msaForm && $msaForm->token)
+                                <a href="{{ route('supplier.msa', ['token' => $msaForm->token]) }}" class="btn btn-primary btn-sm w-100" target="_blank">
+                                    <i class="ti ti-pencil me-1"></i>Lanjutkan Form
+                                </a>
+                                @else
+                                <div class="alert alert-warning mb-0 p-2">
+                                    <small>Form not initialized</small>
+                                </div>
+                                @endif
+                            @elseif($msaStatus === 'SUBMITTED')
+                                {{-- Show PDF buttons --}}
+                                @if($msaForm)
+                                <div class="d-flex gap-2 w-100">
+                                    <a href="{{ route('api.msa.pdf', ['id' => $msaForm->id]) }}?v={{ $doc->updated_at?->timestamp ?? time() }}" 
+                                       class="btn btn-outline-primary btn-sm flex-fill" 
+                                       target="_blank"
+                                       style="min-width: 0;">
+                                        <i class="ti ti-eye me-1"></i>View PDF
+                                    </a>
+                                    <a href="{{ route('api.msa.pdf', ['id' => $msaForm->id]) }}?download=1&v={{ $doc->updated_at?->timestamp ?? time() }}" 
+                                       class="btn btn-success btn-sm flex-fill"
+                                       style="min-width: 0;">
+                                        <i class="ti ti-download me-1"></i>Download
+                                    </a>
+                                </div>
+                                @endif
+                            @endif
+                        </td>
+                        
+                        <!-- DATE SUBMIT -->
+                        <td class="text-center align-middle">
+                            @if($msaForm && $msaForm->submitted_at)
+                                <div class="fw-semibold">{{ $msaForm->submitted_at->format('d M Y') }}</div>
+                                <small class="text-muted">{{ $msaForm->submitted_at->format('H:i') }}</small>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                     </tr>
                     {{-- Special handling for Form-based documents (PSW, PS) --}}
@@ -194,93 +379,120 @@
                         <td class="text-center align-middle">
                             <strong>{{ $index + 1 }}</strong>
                         </td>
-                        <td class="align-middle" colspan="3">
+                        <td class="align-middle">
                             {{-- PSW/PS Form component --}}
-                            <div class="d-flex flex-column gap-2">
-                                <div class="d-flex align-items-start justify-content-between">
-                                    <div class="flex-grow-1">
-                                        <div class="fw-semibold mb-1">{{ $doc->documentType->name }}</div>
-                                        @if($doc->documentType->is_mandatory)
-                                            <span class="badge bg-danger badge-sm">Mandatory</span>
-                                        @else
-                                            <span class="badge bg-secondary badge-sm">Optional</span>
-                                        @endif
-                                        
-                                        @php
-                                            $formModel = $doc->documentType->code === 'PSW' 
-                                                ? \App\Models\PartSubmissionWarrant::where('request_document_id', $doc->id)->first()
-                                                : \App\Models\PackagingStandard::where('request_document_id', $doc->id)->first();
-                                            $formStatus = $formModel?->status ?? $doc->status;
-                                        @endphp
-                                        
-                                        @if($formStatus === 'DRAFT')
-                                            <span class="badge bg-secondary badge-sm ms-1">Draft</span>
-                                        @elseif($doc->status === 'PENDING')
-                                            <span class="badge bg-warning text-dark badge-sm ms-1">Pending</span>
-                                        @elseif($doc->status === 'SUBMITTED')
-                                            <span class="badge bg-info badge-sm ms-1">Submitted</span>
-                                        @elseif($doc->status === 'REVISE')
-                                            <span class="badge bg-danger badge-sm ms-1">Revision Required</span>
-                                        @elseif($doc->status === 'APPROVED')
-                                            <span class="badge bg-success badge-sm ms-1">Approved</span>
-                                        @endif
-                                        
-                                        @if($doc->documentType->description)
-                                        <div class="text-muted small mt-1">{{ $doc->documentType->description }}</div>
-                                        @endif
-                                        
-                                        @if($doc->status === 'REVISE' && $doc->revision_note)
-                                        <div class="alert alert-danger small mt-2 mb-0 p-2">
-                                            <strong><i class="ti ti-alert-circle"></i> Revision Required:</strong><br>
-                                            {{ $doc->revision_note }}
-                                            @if($doc->revision_deadline_at)
-                                            <div class="mt-1">
-                                                <small><i class="ti ti-clock"></i> Deadline: {{ $doc->revision_deadline_at->format('d M Y H:i') }}</small>
-                                            </div>
-                                            @endif
-                                        </div>
-                                        @endif
-                                    </div>
-                                    
-                                    <div class="ms-3">
-                                        @if($formStatus === 'DRAFT' || $doc->status === 'PENDING' || $doc->status === 'REVISE')
-                                            {{-- Show form button --}}
-                                            @php
-                                                $formRoute = $doc->documentType->code === 'PSW'
-                                                    ? route('psw.form', ['token' => $doc->id])
-                                                    : route('ps.form', ['token' => $doc->id]);
-                                            @endphp
-                                            <a href="{{ $formRoute }}" class="btn btn-primary btn-sm" target="_blank">
-                                                <i class="ti ti-pencil me-1"></i>{{ $formStatus === 'DRAFT' ? 'Continue Form' : 'Isi Form' }}
-                                            </a>
-                                        @elseif(in_array($doc->status, ['SUBMITTED', 'APPROVED']))
-                                            {{-- Show PDF buttons --}}
-                                            @php
-                                                $pdfRoute = $doc->documentType->code === 'PSW'
-                                                    ? route('psw.pdf', ['pswId' => $doc->id])
-                                                    : route('ps.pdf', ['psId' => $doc->id]);
-                                                $downloadRoute = $doc->documentType->code === 'PSW'
-                                                    ? route('psw.download', ['pswId' => $doc->id])
-                                                    : route('ps.download', ['psId' => $doc->id]);
-                                            @endphp
-                                            <div class="d-flex flex-column gap-2">
-                                                <small class="text-muted">
-                                                    <i class="ti ti-calendar me-1"></i>{{ $doc->submitted_at?->format('d M Y H:i') }}
-                                                </small>
-                                                <a href="{{ $pdfRoute }}" 
-                                                   class="btn btn-outline-primary btn-sm" 
-                                                   target="_blank">
-                                                    <i class="ti ti-eye"></i> View PDF
-                                                </a>
-                                                <a href="{{ $downloadRoute }}" 
-                                                   class="btn btn-success btn-sm">
-                                                    <i class="ti ti-download"></i> Download
-                                                </a>
-                                            </div>
-                                        @endif
-                                    </div>
+                            <div class="fw-semibold mb-1">{{ $doc->documentType->name }}</div>
+                            @if($doc->documentType->is_mandatory)
+                                <span class="badge bg-danger badge-sm">Mandatory</span>
+                            @else
+                                <span class="badge bg-secondary badge-sm">Optional</span>
+                            @endif
+                            
+                            @php
+                                // SINGLE SOURCE OF TRUTH: Ambil status dari tabel form (PSW atau PS)
+                                if ($doc->documentType->code === 'PSW') {
+                                    $formModel = $doc->partSubmissionWarrant;
+                                    if (!$formModel) {
+                                        $formModel = \App\Models\PartSubmissionWarrant::where('request_document_id', $doc->id)->first();
+                                    }
+                                } else {
+                                    $formModel = $doc->packagingStandard;
+                                    if (!$formModel) {
+                                        $formModel = \App\Models\PackagingStandard::where('request_document_id', $doc->id)->first();
+                                    }
+                                }
+                                // Status diambil dari form table, bukan request_documents
+                                $formStatus = $formModel?->status ?? 'PENDING';
+                            @endphp
+                            
+                            {{-- Badge status berdasarkan form status --}}
+                            @if($formStatus === 'DRAFT')
+                                <span class="badge bg-secondary badge-sm ms-1">Draft</span>
+                            @elseif($formStatus === 'PENDING')
+                                <span class="badge bg-warning text-dark badge-sm ms-1">Pending</span>
+                            @elseif($formStatus === 'SUBMITTED' || $formStatus === 'PENDING_REVIEW')
+                                <span class="badge bg-success badge-sm ms-1">Submitted</span>
+                            @elseif($formStatus === 'REVISE')
+                                <span class="badge bg-danger badge-sm ms-1">Revision Required</span>
+                            @elseif($formStatus === 'APPROVED')
+                                <span class="badge bg-success badge-sm ms-1">Approved</span>
+                            @elseif($formStatus === 'REJECTED')
+                                <span class="badge bg-danger badge-sm ms-1">Rejected</span>
+                            @endif
+                            
+                            @if($doc->documentType->description)
+                            <div class="text-muted small mt-1">{{ $doc->documentType->description }}</div>
+                            @endif
+                            
+                            @if($doc->status === 'REVISE' && $doc->revision_note)
+                            <div class="alert alert-danger small mt-2 mb-0 p-2">
+                                <strong><i class="ti ti-alert-circle"></i> Revision Required:</strong><br>
+                                {{ $doc->revision_note }}
+                                @if($doc->revision_deadline_at)
+                                <div class="mt-1">
+                                    <small><i class="ti ti-clock"></i> Deadline: {{ $doc->revision_deadline_at->format('d M Y H:i') }}</small>
                                 </div>
+                                @endif
                             </div>
+                            @endif
+                        </td>
+                        
+                        <!-- ATTACHMENT -->
+                        <td class="align-middle">
+                            @if(in_array($formStatus, ['DRAFT', 'PENDING', 'REVISE']))
+                                {{-- Show form button --}}
+                                @php
+                                    $formRoute = $doc->documentType->code === 'PSW'
+                                        ? route('psw.form', ['token' => $doc->id])
+                                        : route('ps.form', ['token' => $doc->id]);
+                                    $buttonText = $formStatus === 'DRAFT' ? 'Lanjutkan Form' : 'Isi Form Terlebih Dahulu';
+                                @endphp
+                                <a href="{{ $formRoute }}" class="btn btn-primary btn-sm w-100" target="_blank">
+                                    <i class="ti ti-pencil me-1"></i>{{ $buttonText }}
+                                </a>
+                            @elseif(in_array($formStatus, ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED']))
+                                {{-- Show PDF buttons --}}
+                                @php
+                                    if ($doc->documentType->code === 'PSW') {
+                                        $psw = $formModel;
+                                        $pdfRoute = $psw ? route('psw.pdf', ['pswId' => $psw->id]) . '?v=' . ($doc->updated_at?->timestamp ?? time()) : '#';
+                                        $downloadRoute = $psw ? route('psw.download', ['pswId' => $psw->id]) . '?v=' . ($doc->updated_at?->timestamp ?? time()) : '#';
+                                    } else {
+                                        $ps = $formModel;
+                                        $pdfRoute = $ps ? route('ps.pdf', ['psId' => $ps->id]) . '?v=' . ($doc->updated_at?->timestamp ?? time()) : '#';
+                                        $downloadRoute = $ps ? route('ps.download', ['psId' => $ps->id]) . '?v=' . ($doc->updated_at?->timestamp ?? time()) : '#';
+                                    }
+                                @endphp
+                                @if($pdfRoute !== '#')
+                                <div class="d-flex gap-2 w-100">
+                                    <a href="{{ $pdfRoute }}" 
+                                       class="btn btn-outline-primary btn-sm flex-fill" 
+                                       target="_blank"
+                                       style="min-width: 0;">
+                                        <i class="ti ti-eye me-1"></i>View PDF
+                                    </a>
+                                    <a href="{{ $downloadRoute }}" 
+                                       class="btn btn-success btn-sm flex-fill"
+                                       style="min-width: 0;">
+                                        <i class="ti ti-download me-1"></i>Download
+                                    </a>
+                                </div>
+                                @else
+                                <div class="alert alert-warning mb-0 p-2">
+                                    <small>Form data not found</small>
+                                </div>
+                                @endif
+                            @endif
+                        </td>
+                        
+                        <!-- DATE SUBMIT -->
+                        <td class="text-center align-middle">
+                            @if($formModel && $formModel->submitted_at)
+                                <div class="fw-semibold">{{ $formModel->submitted_at->format('d M Y') }}</div>
+                                <small class="text-muted">{{ $formModel->submitted_at->format('H:i') }}</small>
+                            @else
+                                <span class="text-muted">-</span>
+                            @endif
                         </td>
                     </tr>
                     @else
@@ -305,7 +517,7 @@
                                     @if($doc->status === 'PENDING')
                                         <span class="badge bg-warning text-dark badge-sm ms-1">Pending</span>
                                     @elseif($doc->status === 'SUBMITTED')
-                                        <span class="badge bg-info badge-sm ms-1">Submitted</span>
+                                        <span class="badge bg-success badge-sm ms-1">Submitted</span>
                                     @elseif($doc->status === 'REVISE')
                                         <span class="badge bg-danger badge-sm ms-1">Revision Required</span>
                                     @elseif($doc->status === 'APPROVED')
@@ -332,21 +544,14 @@
                             </div>
                         </td>
                         
-                        <!-- DATE SUBMIT -->
-                        <td class="text-center align-middle">
-                            @if($doc->submitted_at)
-                                <div class="fw-semibold">{{ $doc->submitted_at->format('d F Y') }}</div>
-                                <small class="text-muted">{{ $doc->submitted_at->format('H:i') }}</small>
-                            @elseif($doc->uploaded_at)
-                                <div class="fw-semibold">{{ $doc->uploaded_at->format('d F Y') }}</div>
-                                <small class="text-muted">{{ $doc->uploaded_at->format('H:i') }}</small>
-                            @else
-                                <span class="text-muted">-</span>
-                            @endif
-                        </td>
-                        
                         <!-- ATTACHMENT -->
                         <td class="align-middle">
+                            @php
+                                $docCode = $doc->documentType->code ?? '';
+                                // Hide upload button for these document types (form-based, coming soon)
+                                $hideUploadButton = in_array($docCode, ['XR_CONTROL_CHART', 'N1_DATA']);
+                            @endphp
+                            
                             @if($doc->file_path)
                                 <!-- File Uploaded -->
                                 <div class="d-flex flex-column gap-2">
@@ -368,16 +573,18 @@
                                     </div>
                                     
                                     <!-- Action Buttons -->
-                                    <div class="d-flex gap-2">
+                                    <div class="d-flex gap-2 w-100">
                                         @if($doc->file_path)
-                                        <a href="{{ route('supplier.view', $doc->id) }}" 
-                                           class="btn btn-primary btn-sm flex-fill" 
-                                           target="_blank">
-                                            <i class="ti ti-eye"></i> View
+                                        <a href="{{ route('supplier.view', $doc->id) }}?v={{ $doc->updated_at?->timestamp ?? time() }}" 
+                                           class="btn btn-outline-primary btn-sm flex-fill" 
+                                           target="_blank"
+                                           style="min-width: 0;">
+                                            <i class="ti ti-eye me-1"></i>View
                                         </a>
-                                        <a href="{{ route('supplier.download', $doc->id) }}" 
-                                           class="btn btn-success btn-sm flex-fill">
-                                            <i class="ti ti-download"></i> Download
+                                        <a href="{{ route('supplier.download', $doc->id) }}?v={{ $doc->updated_at?->timestamp ?? time() }}" 
+                                           class="btn btn-success btn-sm flex-fill"
+                                           style="min-width: 0;">
+                                            <i class="ti ti-download me-1"></i>Download
                                         </a>
                                         @endif
                                         @if(!$isSubmitted && in_array($doc->status, ['PENDING', 'REVISE']))
@@ -391,9 +598,15 @@
                                 </div>
                             @else
                                 <!-- No File Uploaded -->
-                                @if(!$isSubmitted)
+                                @if($hideUploadButton)
+                                    <!-- Hidden for form-based documents -->
+                                    <div class="text-center py-2">
+                                        <i class="ti ti-clock text-muted fs-3"></i>
+                                        <div class="text-muted small">Coming Soon</div>
+                                    </div>
+                                @elseif(!$isSubmitted)
                                 <a href="{{ route('supplier.upload.form', $doc->id) }}" 
-                                   class="btn btn-primary btn-sm d-flex align-items-center justify-content-center gap-2">
+                                   class="btn btn-primary btn-sm d-flex align-items-center justify-content-center gap-2 w-100">
                                     <i class="ti ti-upload fs-5"></i> 
                                     <span>Upload Document</span>
                                 </a>
@@ -403,6 +616,19 @@
                                     <div class="text-muted small">Not uploaded</div>
                                 </div>
                                 @endif
+                            @endif
+                        </td>
+                        
+                        <!-- DATE SUBMIT -->
+                        <td class="text-center align-middle">
+                            @if($doc->submitted_at)
+                                <div class="fw-semibold">{{ $doc->submitted_at->format('d F Y') }}</div>
+                                <small class="text-muted">{{ $doc->submitted_at->format('H:i') }}</small>
+                            @elseif($doc->uploaded_at)
+                                <div class="fw-semibold">{{ $doc->uploaded_at->format('d F Y') }}</div>
+                                <small class="text-muted">{{ $doc->uploaded_at->format('H:i') }}</small>
+                            @else
+                                <span class="text-muted">-</span>
                             @endif
                         </td>
                     </tr>

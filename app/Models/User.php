@@ -146,6 +146,34 @@ class User extends Authenticatable
     }
 
     /**
+     * Get supplier safely with error handling
+     * This method ensures supplier is always loaded and valid
+     * 
+     * @return \App\Models\Supplier|null
+     */
+    public function getSupplierSafely()
+    {
+        if (!$this->isSupplier()) {
+            return null;
+        }
+
+        if (!$this->supplier_id) {
+            \Log::warning('User is supplier but has no supplier_id', [
+                'user_id' => $this->id,
+                'email' => $this->email
+            ]);
+            return null;
+        }
+
+        // Load relationship if not loaded
+        if (!$this->relationLoaded('supplier')) {
+            $this->load('supplier');
+        }
+
+        return $this->supplier;
+    }
+
+    /**
      * Check apakah user dapat melakukan create request
      * Hanya Admin QA yang dapat membuat request
      */

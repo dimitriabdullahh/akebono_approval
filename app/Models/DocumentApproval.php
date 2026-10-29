@@ -12,9 +12,17 @@ class DocumentApproval extends Model
     protected $fillable = [
         'request_document_id',
         'user_id',
+        'employee_id',
         'scope',
+        'division',
+        'role',
+        'stage',
+        'document_type',
+        'revision_number',
+        'approval_cycle',
         'status',
         'note',
+        'comment',
         'approved_at',
     ];
 
@@ -38,6 +46,42 @@ class DocumentApproval extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relasi: Approval dilakukan oleh satu employee (new multi-division workflow)
+     */
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
+
+    /**
+     * Relasi: Approval has one signature
+     */
+    public function signature()
+    {
+        return $this->hasOne(ApprovalSignature::class, 'approval_id');
+    }
+
+    /**
+     * Relasi: Approval has one or more tokens (for email-based approval)
+     */
+    public function tokens()
+    {
+        return $this->hasMany(ApprovalToken::class, 'document_approval_id');
+    }
+
+    /**
+     * Get active (valid) token for this approval
+     */
+    public function activeToken()
+    {
+        return $this->hasOne(ApprovalToken::class, 'document_approval_id')
+            ->where('is_revoked', false)
+            ->whereNull('used_at')
+            ->where('expires_at', '>', now())
+            ->latest();
     }
 
     /**

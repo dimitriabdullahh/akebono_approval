@@ -29,6 +29,11 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <div class="mb-3">
+                <label class="text-muted small mb-1">CATEGORY</label>
+                <div class="fw-bold">{{ $request->category ?? '-' }}</div>
+            </div>
+
+            <div class="mb-3">
                 <label class="text-muted small mb-1">MODEL</label>
                 <div class="fw-bold">{{ $request->model }}</div>
             </div>
@@ -127,13 +132,50 @@
                                                 @endif
                                             </div>
                                             @php
+                                                // Determine actual status for form-based documents
+                                                $actualStatus = $reqDoc->status;
+                                                
+                                                if ($reqDoc->documentType->code === 'IS' && $reqDoc->inspectionStandard) {
+                                                    $formStatus = $reqDoc->inspectionStandard->status;
+                                                    if (in_array($formStatus, ['SUBMITTED', 'PENDING_REVIEW'])) {
+                                                        $actualStatus = 'SUBMITTED';
+                                                    } elseif ($formStatus === 'APPROVED') {
+                                                        $actualStatus = 'APPROVED';
+                                                    } elseif ($formStatus === 'REVISE') {
+                                                        $actualStatus = 'REVISE';
+                                                    }
+                                                } elseif ($reqDoc->documentType->code === 'MSA' && $reqDoc->msaGageRr) {
+                                                    // MSA status can be uppercase or lowercase
+                                                    if (in_array(strtoupper($reqDoc->msaGageRr->status), ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED'])) {
+                                                        $actualStatus = 'SUBMITTED';
+                                                    }
+                                                } elseif ($reqDoc->documentType->code === 'PSW' && $reqDoc->partSubmissionWarrant) {
+                                                    $formStatus = $reqDoc->partSubmissionWarrant->status;
+                                                    if (in_array($formStatus, ['SUBMITTED', 'PENDING_REVIEW'])) {
+                                                        $actualStatus = 'SUBMITTED';
+                                                    } elseif ($formStatus === 'APPROVED') {
+                                                        $actualStatus = 'APPROVED';
+                                                    } elseif ($formStatus === 'REVISE') {
+                                                        $actualStatus = 'REVISE';
+                                                    }
+                                                } elseif ($reqDoc->documentType->code === 'PACKAGING_STANDARD' && $reqDoc->packagingStandard) {
+                                                    $formStatus = $reqDoc->packagingStandard->status;
+                                                    if (in_array($formStatus, ['SUBMITTED', 'PENDING_REVIEW'])) {
+                                                        $actualStatus = 'SUBMITTED';
+                                                    } elseif ($formStatus === 'APPROVED') {
+                                                        $actualStatus = 'APPROVED';
+                                                    } elseif ($formStatus === 'REVISE') {
+                                                        $actualStatus = 'REVISE';
+                                                    }
+                                                }
+                                                
                                                 $statusConfig = [
                                                     'PENDING' => ['badge' => 'secondary', 'label' => 'Menunggu Upload'],
                                                     'SUBMITTED' => ['badge' => 'info', 'label' => 'Sudah Dikirim'],
                                                     'APPROVED' => ['badge' => 'success', 'label' => 'Disetujui'],
                                                     'REVISE' => ['badge' => 'warning', 'label' => 'Revisi Diperlukan'],
                                                 ];
-                                                $config = $statusConfig[$reqDoc->status] ?? ['badge' => 'secondary', 'label' => $reqDoc->status];
+                                                $config = $statusConfig[$actualStatus] ?? ['badge' => 'secondary', 'label' => $actualStatus];
                                             @endphp
                                             <span class="badge bg-{{ $config['badge'] }} badge-sm">{{ $config['label'] }}</span>
                                             
@@ -156,49 +198,142 @@
                                 
                                 <!-- FILE & AKSI -->
                                 <td class="align-middle">
-                                    @if($reqDoc->file_name)
-                                        <!-- File Uploaded -->
+                                    @php
+                                        // Check if document is form-based (IS, PS, PSW, MSA)
+                                        $isFormBased = in_array($reqDoc->documentType->code, ['IS', 'PACKAGING_STANDARD', 'PSW', 'MSA']);
+                                        
+                                        // Check if document has been submitted
+                                        $hasSubmission = false;
+                                        $submissionDate = null;
+                                        $downloadRoute = null;
+                                        $viewRoute = null;
+                                        
+                                        if ($isFormBased) {
+                                            // Check form-based documents
+                                            if ($reqDoc->documentType->code === 'IS') {
+                                                $formModel = $reqDoc->inspectionStandard;
+                                                if ($formModel && in_array($formModel->status, ['SUBMITTED', 'APPROVED', 'REVISE'])) {
+                                                    $hasSubmission = true;
+                                                    $submissionDate = $formModel->submitted_at;
+                                                    $viewRoute = route('inspection-standard.pdf', $formModel->id);
+                                                    $downloadRoute = route('inspection-standard.download', $formModel->id);
+                                                }
+                                            } elseif ($reqDoc->documentType->code === 'PACKAGING_STANDARD') {
+                                                $formModel = $reqDoc->packagingStandard;
+                                                if ($formModel && in_array($formModel->status, ['SUBMITTED', 'APPROVED', 'REVISE'])) {
+                                                    $hasSubmission = true;
+                                                    $submissionDate = $formModel->submitted_at;
+                                                    $viewRoute = route('ps.pdf', $formModel->id);
+                                                    $downloadRoute = route('ps.download', $formModel->id);
+                                                }
+                                            } elseif ($reqDoc->documentType->code === 'PSW') {
+                                                $formModel = $reqDoc->partSubmissionWarrant;
+                                                if ($formModel && in_array($formModel->status, ['SUBMITTED', 'APPROVED', 'REVISE'])) {
+                                                    $hasSubmission = true;
+                                                    $submissionDate = $formModel->submitted_at;
+                                                    $viewRoute = route('psw.pdf', $formModel->id);
+                                                    $downloadRoute = route('psw.download', $formModel->id);
+                                                }
+                                            } elseif ($reqDoc->documentType->code === 'MSA') {
+                                                $formModel = $reqDoc->msaGageRr;
+                                                // MSA status can be uppercase or lowercase
+                                                if ($formModel && in_array(strtoupper($formModel->status), ['SUBMITTED', 'PENDING_REVIEW', 'APPROVED'])) {
+                                                    $hasSubmission = true;
+                                                    $submissionDate = $formModel->submitted_at;
+                                                    $viewRoute = route('api.msa.pdf', $formModel->id);
+                                                    $downloadRoute = route('api.msa.download', $formModel->id);
+                                                }
+                                            }
+                                        } else {
+                                            // Regular file upload
+                                            if ($reqDoc->file_name || $reqDoc->file_path) {
+                                                $hasSubmission = true;
+                                                $submissionDate = $reqDoc->submitted_at ?? $reqDoc->uploaded_at;
+                                            }
+                                        }
+                                    @endphp
+                                    
+                                    @if($hasSubmission)
+                                        <!-- Document Submitted -->
                                         <div class="d-flex flex-column gap-2">
                                             <!-- File Info -->
                                             <div class="border rounded p-2 bg-light d-flex align-items-center">
                                                 <i class="ti ti-file-check text-success fs-4 me-2"></i>
                                                 <div class="flex-grow-1">
-                                                    <div class="fw-semibold small">{{ Str::limit($reqDoc->file_name, 35) }}</div>
-                                                    <small class="text-muted">
-                                                        @php
-                                                            $extension = strtoupper(pathinfo($reqDoc->file_name, PATHINFO_EXTENSION));
-                                                        @endphp
-                                                        {{ $extension }} File
-                                                        @if($reqDoc->file_size)
-                                                            | {{ number_format($reqDoc->file_size / 1024, 2) }} KB
-                                                        @endif
-                                                    </small>
+                                                    @if($isFormBased)
+                                                        <div class="fw-semibold small">Form Submitted</div>
+                                                        <small class="text-muted">
+                                                            {{ $reqDoc->documentType->name }}
+                                                            @if($submissionDate)
+                                                                | {{ $submissionDate->format('d M Y H:i') }}
+                                                            @endif
+                                                        </small>
+                                                    @else
+                                                        <div class="fw-semibold small">{{ Str::limit($reqDoc->file_name, 35) }}</div>
+                                                        <small class="text-muted">
+                                                            @php
+                                                                $extension = strtoupper(pathinfo($reqDoc->file_name, PATHINFO_EXTENSION));
+                                                            @endphp
+                                                            {{ $extension }} File
+                                                            @if($reqDoc->file_size)
+                                                                | {{ number_format($reqDoc->file_size / 1024, 2) }} KB
+                                                            @endif
+                                                        </small>
+                                                    @endif
                                                 </div>
                                             </div>
                                             
                                             <!-- Action Buttons -->
                                             <div class="d-flex gap-2">
-                                                @if($reqDoc->file_name && $reqDoc->status !== 'PENDING')
-                                                    <a href="{{ route('review.show', $reqDoc) }}" 
+                                                @if($isFormBased && $viewRoute)
+                                                    <a href="{{ route('admin.document.preview', $reqDoc->id) }}" 
                                                        class="btn btn-primary btn-sm flex-fill" 
-                                                       title="Review Dokumen"
-                                                       target="_blank">
-                                                        <i class="ti ti-eye"></i> View
+                                                       title="View PDF">
+                                                        <i class="ti ti-eye"></i> View PDF
                                                     </a>
-                                                @endif
-                                                
-                                                @if($reqDoc->status === 'APPROVED' && $reqDoc->file_path)
-                                                    <a href="{{ route('admin.documents.download', $reqDoc->id) }}" 
+                                                    <a href="{{ $downloadRoute }}" 
                                                        class="btn btn-success btn-sm flex-fill" 
                                                        title="Download PDF"
                                                        target="_blank">
                                                         <i class="ti ti-download"></i> Download
                                                     </a>
+                                                    @if($actualStatus === 'SUBMITTED' || $actualStatus === 'REVISE')
+                                                    <a href="{{ route('review.show', $reqDoc) }}" 
+                                                       class="btn btn-info btn-sm flex-fill" 
+                                                       title="Review">
+                                                        <i class="ti ti-checklist"></i> Review
+                                                    </a>
+                                                    @endif
+                                                @elseif(!$isFormBased)
+                                                    @if($reqDoc->file_name && $reqDoc->status !== 'PENDING')
+                                                        <a href="{{ route('admin.document.preview', $reqDoc->id) }}" 
+                                                           class="btn btn-primary btn-sm flex-fill" 
+                                                           title="View Document">
+                                                            <i class="ti ti-eye"></i> View PDF
+                                                        </a>
+                                                    @endif
+                                                    
+                                                    @if($reqDoc->status === 'APPROVED' && $reqDoc->file_path)
+                                                        <a href="{{ route('admin.documents.download', $reqDoc->id) }}" 
+                                                           class="btn btn-success btn-sm flex-fill" 
+                                                           title="Download PDF"
+                                                           target="_blank">
+                                                            <i class="ti ti-download"></i> Download
+                                                        </a>
+                                                    @endif
+                                                    
+                                                    @if($reqDoc->status === 'SUBMITTED' || $reqDoc->status === 'REVISE')
+                                                        <a href="{{ route('review.show', $reqDoc) }}" 
+                                                           class="btn btn-info btn-sm flex-fill" 
+                                                           title="Review Document">
+                                                            <i class="ti ti-checklist"></i> Review
+                                                        </a>
+                                                    @endif
                                                 @endif
                                             </div>
                                         </div>
                                     @else
-                                        <!-- No File Uploaded -->
+                                        <!-- No Submission Yet -->
                                         <div class="text-center py-2">
                                             <i class="ti ti-file-off text-muted fs-3"></i>
                                             <div class="text-muted small">Not uploaded</div>
